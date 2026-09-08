@@ -1,1 +1,10 @@
-
+pandas
+numpy
+pypdf
+arxiv
+sentence-transformers
+chromadb
+langchain
+langchain-community
+python-dotenv
+jupyterlab
