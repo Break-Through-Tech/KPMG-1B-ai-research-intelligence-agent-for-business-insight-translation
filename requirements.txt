@@ -8,3 +8,5 @@ langchain
 langchain-community
 python-dotenv
 jupyterlab
+google-genai
+pytest
