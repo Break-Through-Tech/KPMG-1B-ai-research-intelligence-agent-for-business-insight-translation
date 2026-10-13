@@ -1,8 +1,9 @@
+import argparse
 import json
 import re
 from pathlib import Path
 
-from ingestion import fetch_arxiv_papers
+from ingestion import fetch_arxiv_papers, load_local_papers
 
 
 def clean_text(text):
@@ -42,12 +43,13 @@ def preprocess_papers(papers):
 
     for paper in papers:
         title = clean_text(paper["title"])
-        abstract = clean_text(paper["abstract"])
+        # Local studies use PDF text; abstract records still work if supplied.
+        text = clean_text(paper.get("text", paper.get("abstract", "")))
 
-        if not abstract:
+        if not text:
             continue
 
-        chunks = chunk_text(abstract)
+        chunks = chunk_text(text)
 
         for index, chunk in enumerate(chunks):
             processed_chunks.append(
@@ -66,7 +68,7 @@ def preprocess_papers(papers):
     return processed_chunks
 
 
-def save_processed_data(data, output_path="data/processed/arxiv_chunks.jsonl"):
+def save_processed_data(data, output_path="data/processed/study_chunks.jsonl"):
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -76,12 +78,22 @@ def save_processed_data(data, output_path="data/processed/arxiv_chunks.jsonl"):
 
 
 if __name__ == "__main__":
-    papers = fetch_arxiv_papers(max_results=100)
+    parser = argparse.ArgumentParser(description="Prepare the selected study dataset.")
+    parser.add_argument("--dataset", choices=["studies", "arxiv"], default="studies")
+    args = parser.parse_args()
+
+    # Keep the five-study deliverable as the default; arXiv exploration is optional.
+    if args.dataset == "arxiv":
+        papers = fetch_arxiv_papers(max_results=100)
+        output_path = "data/processed/arxiv_chunks.jsonl"
+    else:
+        papers = load_local_papers()
+        output_path = "data/processed/study_chunks.jsonl"
 
     chunks = preprocess_papers(papers)
 
-    save_processed_data(chunks)
+    save_processed_data(chunks, output_path)
 
-    print(f"Fetched {len(papers)} papers")
+    print(f"Loaded {len(papers)} papers from {args.dataset}")
     print(f"Created {len(chunks)} chunks")
-    print("Saved to data/processed/arxiv_chunks.jsonl")
+    print(f"Saved to {output_path}")

@@ -10,7 +10,7 @@ says so instead of guessing.
 Run from the repo root, after preprocessing has written the chunks:
 
     python src/generation.py "How can language models reduce computational cost?"
-    python src/generation.py "..." --top-k 8 --json
+    python src/generation.py "..." --top-k 3 --json
 
 Needs GEMINI_API_KEY in .env (a free key from Google AI Studio).
 GEMINI_MODEL picks the model, and defaults to a free-tier Flash model.
@@ -250,13 +250,14 @@ def to_markdown(result):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("question")
-    parser.add_argument("--top-k", type=int, default=8, help="chunks to retrieve before grouping by paper")
+    parser.add_argument("--dataset", choices=["studies", "arxiv"], default="studies")
+    parser.add_argument("--top-k", type=int, default=3, help="distinct papers to retrieve")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--json", action="store_true", help="print the full result as JSON")
     args = parser.parse_args()
 
     from retrieval import build_vector_store, load_chunks, search
 
-    collection, embedder = build_vector_store(load_chunks())
+    collection, embedder = build_vector_store(load_chunks(args.dataset), args.dataset)
     result = summarize(args.question, search(args.question, collection, embedder, top_k=args.top_k), model=args.model)
     print(json.dumps(result, indent=2) if args.json else to_markdown(result))
