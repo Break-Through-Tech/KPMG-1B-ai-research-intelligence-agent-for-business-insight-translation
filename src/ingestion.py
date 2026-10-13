@@ -1,4 +1,41 @@
+from pathlib import Path
+
 import arxiv
+from pypdf import PdfReader
+
+
+def load_local_papers(data_path="data"):
+    """Read the five supplied studies without downloading more papers."""
+    paths = sorted(Path(data_path).glob("*.pdf"))
+
+    if len(paths) != 5:
+        raise ValueError("Expected the five supplied PDF studies in data/.")
+
+    papers = []
+
+    for path in paths:
+        reader = PdfReader(path)
+        metadata = reader.metadata or {}
+        paper_id = path.name.split("_", 1)[0]
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+        if not text.strip():
+            raise ValueError(f"No text could be extracted from {path.name}")
+
+        # Keep the PDF title and source ID so retrieved passages remain traceable.
+        papers.append(
+            {
+                "title": metadata.get("/Title") or path.stem,
+                "authors": (metadata.get("/Author") or "").split("; "),
+                "text": text,
+                "published": "",
+                "categories": [],
+                "pdf_url": f"https://arxiv.org/pdf/{paper_id}",
+                "entry_id": f"https://arxiv.org/abs/{paper_id}",
+            }
+        )
+
+    return papers
 
 
 def fetch_arxiv_papers(query="cat:cs.AI", max_results=100):
@@ -30,11 +67,10 @@ def fetch_arxiv_papers(query="cat:cs.AI", max_results=100):
 
 
 if __name__ == "__main__":
-    papers = fetch_arxiv_papers(max_results=10)
+    papers = load_local_papers()
 
-    print(f"Fetched {len(papers)} papers")
+    print(f"Loaded {len(papers)} supplied studies")
 
     for paper in papers[:3]:
         print("\nTitle:", paper["title"])
-        print("Published:", paper["published"])
-        print("Categories:", paper["categories"])
+        print("PDF:", paper["pdf_url"])
