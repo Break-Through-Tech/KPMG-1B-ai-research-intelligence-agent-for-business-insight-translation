@@ -35,7 +35,7 @@ NOT_ANSWERED = "The retrieved papers don't answer this question."
 RETRYABLE = {429, 500, 503}
 
 
-SYSTEM_INSTRUCTION = """You summarize AI research papers for KPMG analysts.
+SYSTEM_INSTRUCTION = """You summarize AI research papers for KPMG analysts and translate technical findings into clear business implications.
 
 Rules you must follow.
 1. Use only the sources provided. Do not use outside knowledge, even if you know more about the topic.
@@ -43,8 +43,13 @@ Rules you must follow.
 3. Only cite a source for a finding it actually supports.
 4. If the sources do not contain information that answers the question, set "answerable" to false and leave "findings" empty. Do not stretch loosely related sources to fit.
 5. If the sources answer only part of the question, answer that part and describe what is missing in "gaps".
-6. Write each finding as one or two plain sentences. State results the way the paper does, and say so when a result is preliminary or limited to one setting.
-7. Do not put source IDs inside the finding text itself. Put them in "citations"."""
+6. Write each finding as two short sentences in plain language. The first sentence states the research finding. The second sentence must begin with "Business implication:" and explain what the finding could mean for a business decision or use case.
+7. Business implications must be conservative interpretations of the cited research. Do not invent ROI, financial savings, legal requirements, market claims, or implementation results that the paper does not support.
+8. When supported by the source, explain implications in terms of cost, efficiency, capability, workflow, risk, scalability, or adoption.
+9. Avoid unnecessary technical jargon. If a technical term is necessary, explain it in simple language that a business stakeholder can understand.
+10. Clearly distinguish what the research demonstrated from what it suggests for business use.
+11. Do not put source IDs inside the finding text itself. Put them in "citations"."""
+
 
 RESPONSE_SCHEMA = {
     "type": "object",
@@ -544,7 +549,7 @@ def to_markdown(result):
     return "\n".join(lines)
 
 
-# ------------------------------------------- CLI
+# ---------------------------------------------------------------- CLI
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
