@@ -162,3 +162,33 @@ This preserves the existing paper-ranking behavior while providing more local co
 Citation validation currently confirms that a cited paper was retrieved, but it does not independently verify that every generated claim is semantically entailed by the cited passage.
 
 The current benchmark also uses a small known collection of five research papers, so future evaluation should include unseen papers and additional business-focused questions.
+
+Task #4 introduced business-friendly prompt engineering, documented in `docs/business_insight_prompting.md`. Task #5 evaluates the integrated workflow after that prompt improvement.
+## Task #5 Evaluation: Relevance, Accuracy, and Completeness
+
+The integrated workflow was evaluated using the rubric defined in `docs/evaluation_rubric.md`.
+
+| Question | Relevance | Accuracy | Completeness | Result |
+|---|---:|---:|---:|---|
+| AI model routing and cost | 3/3 | 3/3 | 3/3 | PASS |
+| Workflow knowledge from computer-use traces | 3/3 | 2/3 | 3/3 | PASS |
+| Algorithm improvement vs. hardware optimization | 3/3 | 3/3 | 2/3 | PASS |
+| U.S. bank cybersecurity regulations | 3/3 | 3/3 | 3/3 | PASS |
+
+### Findings
+
+The system consistently retrieved relevant research, preserved source grounding, and correctly refused to answer unsupported questions.
+
+The workflow performed especially well when the retrieved papers directly addressed the question. The unsupported banking-regulation question was handled correctly without introducing outside knowledge or fabricated requirements.
+
+### Improvement Opportunities
+
+1. Some generated business implications can extend slightly beyond what the source directly supports. Future prompt or validation logic could require tighter wording around inferred business use cases.
+
+2. The system instruction asks for a business implication, but the current response schema does not require a separate business implication field. As a result, the model may occasionally omit the business implication sentence.
+
+3. A future version could make `business_implication` a required structured field and add validation to ensure it is present and grounded.
+
+### Overall Result
+
+All four representative evaluation questions passed the documented rubric. The integrated workflow shows strong relevance, source-grounded accuracy, and appropriate handling of unsupported questions, with minor opportunities to improve consistency in business insight generation.
