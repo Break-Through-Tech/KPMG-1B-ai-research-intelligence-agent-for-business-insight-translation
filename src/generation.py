@@ -43,12 +43,12 @@ Rules you must follow.
 3. Only cite a source for a finding it actually supports.
 4. If the sources do not contain information that answers the question, set "answerable" to false and leave "findings" empty. Do not stretch loosely related sources to fit.
 5. If the sources answer only part of the question, answer that part and describe what is missing in "gaps".
-6. Write each finding as two short sentences in plain language. The first sentence states the research finding. The second sentence must begin with "Business implication:" and explain what the finding could mean for a business decision or use case.
+6. For each finding, keep the research finding and business implication separate. Put the research result in "statement" and put a short, conservative business interpretation in "business_implication".
 7. Business implications must be conservative interpretations of the cited research. Do not invent ROI, financial savings, legal requirements, market claims, or implementation results that the paper does not support.
 8. When supported by the source, explain implications in terms of cost, efficiency, capability, workflow, risk, scalability, or adoption.
 9. Avoid unnecessary technical jargon. If a technical term is necessary, explain it in simple language that a business stakeholder can understand.
 10. Clearly distinguish what the research demonstrated from what it suggests for business use.
-11. Do not put source IDs inside the finding text itself. Put them in "citations"."""
+11. Do not put source IDs inside the statement or business implication. Put them only in "citations"."""
 
 
 RESPONSE_SCHEMA = {
@@ -56,25 +56,48 @@ RESPONSE_SCHEMA = {
     "properties": {
         "answerable": {
             "type": "boolean",
-            "description": "True only if the sources contain information that answers the question.",
+            "description": (
+                "True only if the sources contain information "
+                "that answers the question."
+            ),
         },
         "findings": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "statement": {"type": "string"},
+                    "statement": {
+                        "type": "string",
+                        "description": (
+                            "A plain-language research finding "
+                            "supported by the cited sources."
+                        ),
+                    },
+                    "business_implication": {
+                        "type": "string",
+                        "description": (
+                            "A conservative business interpretation "
+                            "supported by the same cited research."
+                        ),
+                    },
                     "citations": {
                         "type": "array",
                         "items": {"type": "string"},
                     },
                 },
-                "required": ["statement", "citations"],
+                "required": [
+                    "statement",
+                    "business_implication",
+                    "citations",
+                ],
             },
         },
         "gaps": {
             "type": "string",
-            "description": "What the question asks that the sources do not cover. Empty if nothing is missing.",
+            "description": (
+                "What the question asks that the sources do not cover. "
+                "Empty if nothing is missing."
+            ),
         },
     },
     "required": ["answerable", "findings", "gaps"],
@@ -98,23 +121,36 @@ def collect_sources(results):
     neighboring passages can provide more context without creating duplicate
     citations.
     """
-    if not results or not results.get("documents") or not results["documents"][0]:
+    if (
+        not results
+        or not results.get("documents")
+        or not results["documents"][0]
+    ):
         return []
 
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
-    distances = (results.get("distances") or [[None] * len(documents)])[0]
+    distances = (
+        results.get("distances")
+        or [[None] * len(documents)]
+    )[0]
 
     sources = {}
 
-    for text, meta, distance in zip(documents, metadatas, distances):
+    for text, meta, distance in zip(
+        documents,
+        metadatas,
+        distances,
+    ):
         sid = arxiv_id(meta["paper_id"])
 
         if sid not in sources:
             sources[sid] = {
                 "id": sid,
                 "title": meta.get("title", ""),
-                "published": (meta.get("published") or "")[:10],
+                "published": (
+                    meta.get("published") or ""
+                )[:10],
                 "url": f"https://arxiv.org/abs/{sid}",
                 "rank": len(sources) + 1,
                 "distance": distance,
@@ -164,12 +200,19 @@ def expand_neighbor_context(results, chunks, window=1):
         retrieved chunk
         next chunk
     """
-    if not results or not results.get("documents") or not results["documents"][0]:
+    if (
+        not results
+        or not results.get("documents")
+        or not results["documents"][0]
+    ):
         return results
 
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
-    distances = (results.get("distances") or [[None] * len(documents)])[0]
+    distances = (
+        results.get("distances")
+        or [[None] * len(documents)]
+    )[0]
 
     expanded_documents = []
     expanded_metadatas = []
@@ -177,7 +220,9 @@ def expand_neighbor_context(results, chunks, window=1):
 
     seen = set()
 
-    for index, (document, metadata) in enumerate(zip(documents, metadatas)):
+    for index, (document, metadata) in enumerate(
+        zip(documents, metadatas)
+    ):
         paper_id = metadata.get("paper_id")
         retrieved_chunk_id = metadata.get("chunk_id")
 
@@ -188,7 +233,9 @@ def expand_neighbor_context(results, chunks, window=1):
         )
 
         try:
-            retrieved_chunk_id = int(retrieved_chunk_id)
+            retrieved_chunk_id = int(
+                retrieved_chunk_id
+            )
         except (TypeError, ValueError):
             retrieved_chunk_id = None
 
@@ -200,16 +247,29 @@ def expand_neighbor_context(results, chunks, window=1):
                     continue
 
                 try:
-                    candidate_chunk_id = int(chunk.get("chunk_id"))
+                    candidate_chunk_id = int(
+                        chunk.get("chunk_id")
+                    )
                 except (TypeError, ValueError):
                     continue
 
-                if abs(candidate_chunk_id - retrieved_chunk_id) <= window:
+                if (
+                    abs(
+                        candidate_chunk_id
+                        - retrieved_chunk_id
+                    )
+                    <= window
+                ):
                     neighbors.append(chunk)
 
-            neighbors.sort(key=lambda chunk: int(chunk["chunk_id"]))
+            neighbors.sort(
+                key=lambda chunk: int(
+                    chunk["chunk_id"]
+                )
+            )
 
-        # If neighboring chunks cannot be found, keep the original result.
+        # If neighboring chunks cannot be found,
+        # keep the original result.
         if not neighbors:
             fallback = dict(metadata)
             fallback["text"] = document
@@ -218,7 +278,10 @@ def expand_neighbor_context(results, chunks, window=1):
         for chunk in neighbors:
             chunk_id = chunk.get("chunk_id")
 
-            key = (paper_id, chunk_id)
+            key = (
+                paper_id,
+                chunk_id,
+            )
 
             if key in seen:
                 continue
@@ -226,7 +289,10 @@ def expand_neighbor_context(results, chunks, window=1):
             seen.add(key)
 
             expanded_documents.append(
-                chunk.get("text", document)
+                chunk.get(
+                    "text",
+                    document,
+                )
             )
 
             expanded_metadatas.append({
@@ -236,25 +302,42 @@ def expand_neighbor_context(results, chunks, window=1):
                 ),
                 "title": chunk.get(
                     "title",
-                    metadata.get("title", ""),
+                    metadata.get(
+                        "title",
+                        "",
+                    ),
                 ),
                 "published": chunk.get(
                     "published",
-                    metadata.get("published", ""),
+                    metadata.get(
+                        "published",
+                        "",
+                    ),
                 ),
                 "pdf_url": chunk.get(
                     "pdf_url",
-                    metadata.get("pdf_url", ""),
+                    metadata.get(
+                        "pdf_url",
+                        "",
+                    ),
                 ),
                 "chunk_id": chunk_id,
             })
 
-            expanded_distances.append(distance)
+            expanded_distances.append(
+                distance
+            )
 
     return {
-        "documents": [expanded_documents],
-        "metadatas": [expanded_metadatas],
-        "distances": [expanded_distances],
+        "documents": [
+            expanded_documents
+        ],
+        "metadatas": [
+            expanded_metadatas
+        ],
+        "distances": [
+            expanded_distances
+        ],
     }
 
 
@@ -273,15 +356,20 @@ def call_gemini(
     from google.genai import errors, types
 
     if client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv(
+            "GEMINI_API_KEY"
+        )
 
         if not api_key:
             raise RuntimeError(
                 "Set GEMINI_API_KEY in .env. "
-                "Get a key at https://aistudio.google.com/apikey"
+                "Get a key at "
+                "https://aistudio.google.com/apikey"
             )
 
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(
+            api_key=api_key
+        )
 
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,
@@ -290,24 +378,36 @@ def call_gemini(
         temperature=0.2,
     )
 
-    for attempt in range(retries + 1):
+    for attempt in range(
+        retries + 1
+    ):
         try:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=config,
+            response = (
+                client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=config,
+                )
             )
 
             return response.text
 
         except errors.APIError as err:
             if (
-                getattr(err, "code", None) not in RETRYABLE
+                getattr(
+                    err,
+                    "code",
+                    None,
+                )
+                not in RETRYABLE
                 or attempt == retries
             ):
                 raise
 
-            delay = wait_s * (2 ** attempt)
+            delay = (
+                wait_s
+                * (2 ** attempt)
+            )
 
             print(
                 f"Gemini returned {err.code}, "
@@ -333,38 +433,83 @@ def parse_response(text):
 
 def check_citations(answer, sources):
     """
-    Keep only citations pointing to retrieved papers.
+    Keep only findings that contain:
+    - a research statement,
+    - a business implication,
+    - at least one citation to a retrieved paper.
 
-    Findings without at least one valid retrieved-paper citation are dropped.
+    Invalid citation IDs are removed.
+    Findings that fail validation are dropped.
     """
-    valid = {source["id"] for source in sources}
+    valid = {
+        source["id"]
+        for source in sources
+    }
 
     findings = []
     removed = []
 
-    for finding in answer.get("findings") or []:
+    for finding in (
+        answer.get("findings")
+        or []
+    ):
         statement = re.sub(
             r"\s*\[[^\]]*\]",
             "",
-            str(finding.get("statement", "")),
+            str(
+                finding.get(
+                    "statement",
+                    "",
+                )
+            ),
+        ).strip()
+
+        business_implication = re.sub(
+            r"\s*\[[^\]]*\]",
+            "",
+            str(
+                finding.get(
+                    "business_implication",
+                    "",
+                )
+            ),
         ).strip()
 
         kept = []
 
-        for citation in finding.get("citations") or []:
+        for citation in (
+            finding.get("citations")
+            or []
+        ):
             citation_id = arxiv_id(
-                str(citation).strip("[] ")
+                str(citation).strip(
+                    "[] "
+                )
             )
 
-            if citation_id in valid and citation_id not in kept:
-                kept.append(citation_id)
+            if (
+                citation_id in valid
+                and citation_id not in kept
+            ):
+                kept.append(
+                    citation_id
+                )
 
             elif citation_id not in valid:
-                removed.append(str(citation))
+                removed.append(
+                    str(citation)
+                )
 
-        if statement and kept:
+        if (
+            statement
+            and business_implication
+            and kept
+        ):
             findings.append({
                 "statement": statement,
+                "business_implication": (
+                    business_implication
+                ),
                 "citations": kept,
             })
 
@@ -382,7 +527,9 @@ def summarize(
 
     Tests can replace `llm` with a fake function.
     """
-    sources = collect_sources(results)
+    sources = collect_sources(
+        results
+    )
 
     result = {
         "question": question,
@@ -393,7 +540,8 @@ def summarize(
         "sources": [
             {
                 key: value
-                for key, value in source.items()
+                for key, value
+                in source.items()
                 if key != "texts"
             }
             for source in sources
@@ -404,7 +552,8 @@ def summarize(
 
     if not sources:
         result["note"] = (
-            "No papers were retrieved for this question."
+            "No papers were retrieved "
+            "for this question."
         )
         return result
 
@@ -425,34 +574,50 @@ def summarize(
             )
         )
 
-    except (json.JSONDecodeError, TypeError):
+    except (
+        json.JSONDecodeError,
+        TypeError,
+    ):
         result["note"] = (
-            "The model's response couldn't be read, "
+            "The model's response "
+            "couldn't be read, "
             "so no summary was produced."
         )
         return result
 
-    findings, removed = check_citations(
-        answer,
-        sources,
+    findings, removed = (
+        check_citations(
+            answer,
+            sources,
+        )
     )
 
     result["findings"] = findings
-    result["removed_citations"] = removed
+    result["removed_citations"] = (
+        removed
+    )
     result["gaps"] = str(
         answer.get("gaps") or ""
     ).strip()
 
     result["answered"] = (
-        bool(answer.get("answerable"))
+        bool(
+            answer.get(
+                "answerable"
+            )
+        )
         and bool(findings)
     )
 
-    if answer.get("answerable") and not findings:
+    if (
+        answer.get("answerable")
+        and not findings
+    ):
         result["note"] = (
-            "The model said it could answer, but none "
-            "of its findings had a valid citation, "
-            "so they were removed."
+            "The model said it could answer, "
+            "but none of its findings passed "
+            "the citation and business "
+            "implication validation."
         )
 
     return result
@@ -468,14 +633,23 @@ def to_markdown(result):
     ]
 
     if result["answered"]:
-        for finding in result["findings"]:
+        for finding in (
+            result["findings"]
+        ):
             cites = ", ".join(
                 f"[{citation}]"
-                for citation in finding["citations"]
+                for citation
+                in finding["citations"]
             )
 
             lines.append(
-                f"- {finding['statement']} {cites}"
+                f"- {finding['statement']} "
+                f"{cites}"
+            )
+
+            lines.append(
+                "  **Business implication:** "
+                f"{finding['business_implication']}"
             )
 
         if result["gaps"]:
@@ -488,7 +662,9 @@ def to_markdown(result):
             ]
 
     else:
-        lines.append(NOT_ANSWERED)
+        lines.append(
+            NOT_ANSWERED
+        )
 
         if result["gaps"]:
             lines += [
@@ -504,18 +680,23 @@ def to_markdown(result):
 
     cited = {
         citation
-        for finding in result["findings"]
-        for citation in finding["citations"]
+        for finding
+        in result["findings"]
+        for citation
+        in finding["citations"]
     }
 
     if result["answered"]:
         shown = [
             source
-            for source in result["sources"]
+            for source
+            in result["sources"]
             if source["id"] in cited
         ]
     else:
-        shown = result["sources"]
+        shown = result[
+            "sources"
+        ]
 
     if shown:
         lines += [
@@ -523,7 +704,10 @@ def to_markdown(result):
             (
                 "**Sources**"
                 if result["answered"]
-                else "**Papers that were retrieved**"
+                else (
+                    "**Papers that were "
+                    "retrieved**"
+                )
             ),
         ]
 
@@ -535,7 +719,9 @@ def to_markdown(result):
                 f"{source['url']}"
             )
 
-    if result["removed_citations"]:
+    if result[
+        "removed_citations"
+    ]:
         lines += [
             "",
             (
@@ -546,7 +732,9 @@ def to_markdown(result):
             ),
         ]
 
-    return "\n".join(lines)
+    return "\n".join(
+        lines
+    )
 
 
 # ---------------------------------------------------------------- CLI
@@ -554,7 +742,9 @@ def to_markdown(result):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=(
+            argparse.RawDescriptionHelpFormatter
+        ),
     )
 
     parser.add_argument(
@@ -563,7 +753,10 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--dataset",
-        choices=["studies", "arxiv"],
+        choices=[
+            "studies",
+            "arxiv",
+        ],
         default="studies",
     )
 
@@ -571,7 +764,10 @@ if __name__ == "__main__":
         "--top-k",
         type=int,
         default=3,
-        help="distinct papers to retrieve",
+        help=(
+            "distinct papers "
+            "to retrieve"
+        ),
     )
 
     parser.add_argument(
@@ -582,7 +778,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--json",
         action="store_true",
-        help="print the full result as JSON",
+        help=(
+            "print the full result "
+            "as JSON"
+        ),
     )
 
     args = parser.parse_args()
@@ -593,11 +792,15 @@ if __name__ == "__main__":
         search,
     )
 
-    chunks = load_chunks(args.dataset)
+    chunks = load_chunks(
+        args.dataset
+    )
 
-    collection, embedder = build_vector_store(
-        chunks,
-        args.dataset,
+    collection, embedder = (
+        build_vector_store(
+            chunks,
+            args.dataset,
+        )
     )
 
     retrieved = search(
@@ -607,10 +810,12 @@ if __name__ == "__main__":
         top_k=args.top_k,
     )
 
-    context = expand_neighbor_context(
-        retrieved,
-        chunks,
-        window=1,
+    context = (
+        expand_neighbor_context(
+            retrieved,
+            chunks,
+            window=1,
+        )
     )
 
     result = summarize(
@@ -620,7 +825,12 @@ if __name__ == "__main__":
     )
 
     print(
-        json.dumps(result, indent=2)
+        json.dumps(
+            result,
+            indent=2,
+        )
         if args.json
-        else to_markdown(result)
+        else to_markdown(
+            result
+        )
     )
