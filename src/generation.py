@@ -48,7 +48,9 @@ Rules you must follow.
 8. When supported by the source, explain implications in terms of cost, efficiency, capability, workflow, risk, scalability, or adoption.
 9. Avoid unnecessary technical jargon. If a technical term is necessary, explain it in simple language that a business stakeholder can understand.
 10. Clearly distinguish what the research demonstrated from what it suggests for business use.
-11. Do not put source IDs inside the statement or business implication. Put them only in "citations"."""
+11. Do not claim that a business use will improve accuracy, capability, efficiency, adoption, cost, or other outcomes unless the cited research directly demonstrates that outcome. When the source only suggests a possible use, use cautious wording such as "may support", "could help", or "could be used to".
+12. Do not put source IDs inside the statement or business implication. Put them only in "citations"."""
+
 
 
 RESPONSE_SCHEMA = {
