@@ -10,3 +10,4 @@ python-dotenv
 jupyterlab
 google-genai
 pytest
+streamlit
