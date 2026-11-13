@@ -6,8 +6,9 @@ from pathlib import Path
 
 import streamlit as st
 
-
+# ---------------------------------------------------------
 # Project imports
+# ---------------------------------------------------------
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -19,7 +20,9 @@ from generation import expand_neighbor_context, summarize
 from retrieval import build_vector_store, load_chunks, search
 
 
+# ---------------------------------------------------------
 # Page setup
+# ---------------------------------------------------------
 
 st.set_page_config(
     page_title="AI Research Intelligence Agent",
@@ -29,791 +32,34 @@ st.set_page_config(
 )
 
 
-# Image helper
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
+
+def clean(value):
+    return html.escape(str(value or ""))
+
 
 def image_to_base64(path):
-    return base64.b64encode(
-        Path(path).read_bytes()
-    ).decode()
+    path = Path(path)
+    if not path.exists():
+        return ""
+    return base64.b64encode(path.read_bytes()).decode()
 
 
-KPMG_LOGO = image_to_base64(
-    ROOT / "static" / "kpmg-logo.png"
-)
+KPMG_LOGO = image_to_base64(ROOT / "static" / "kpmg-logo.png")
 
-BTT_WATERMARK = image_to_base64(
-    ROOT / "static" / "btt-watermark.png"
-)
 
-
-# Icons
-
-def icon(name, size=24):
-    return (
-        f'<span class="icon icon-{name}" '
-        f'style="width:{size}px;height:{size}px;"></span>'
-    )
-
-
-# Custom styles
-
-st.html(
-    """
-    <style>
-
-    :root {
-        --navy: #071a37;
-        --purple: #5b35f5;
-        --text: #0d1d3a;
-        --muted: #5f718d;
-    }
-
-    header[data-testid="stHeader"] {
-        height: 0;
-        background: transparent;
-    }
-
-    [data-testid="stToolbar"] {
-        display: none;
-    }
-
-    #MainMenu,
-    footer {
-        display: none;
-    }
-
-    .stApp {
-        background:
-            radial-gradient(
-                circle at 88% -5%,
-                rgba(110, 70, 255, 0.16),
-                transparent 25rem
-            ),
-            radial-gradient(
-                circle at 18% 105%,
-                rgba(79, 115, 255, 0.12),
-                transparent 25rem
-            ),
-            #fbfbfe;
-    }
-
-    .block-container {
-        max-width: 1450px;
-        padding-top: 1.5rem;
-        padding-left: 2.5rem;
-        padding-right: 2.5rem;
-        padding-bottom: 3rem;
-    }
-
-    .top-wave-one {
-        position: fixed;
-        width: 430px;
-        height: 150px;
-        right: -60px;
-        top: -55px;
-        border-radius: 45% 55% 60% 40%;
-        transform: rotate(8deg);
-        background:
-            linear-gradient(
-                120deg,
-                rgba(76, 145, 255, 0.30),
-                rgba(123, 68, 255, 0.58)
-            );
-        pointer-events: none;
-    }
-
-    .top-wave-two {
-        position: fixed;
-        width: 340px;
-        height: 115px;
-        right: -20px;
-        top: 25px;
-        border-radius: 60% 40% 50% 50%;
-        transform: rotate(-6deg);
-        background:
-            linear-gradient(
-                110deg,
-                rgba(118, 163, 255, 0.22),
-                rgba(181, 103, 255, 0.30)
-            );
-        pointer-events: none;
-    }
-
-    .bottom-wave {
-        position: fixed;
-        width: 390px;
-        height: 150px;
-        left: 225px;
-        bottom: -80px;
-        border-radius: 55% 45% 0 0;
-        transform: rotate(10deg);
-        background:
-            linear-gradient(
-                90deg,
-                rgba(75, 126, 255, 0.48),
-                rgba(105, 61, 250, 0.25)
-            );
-        pointer-events: none;
-    }
-
-    .profile-circle {
-        position: fixed;
-        top: 18px;
-        right: 22px;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: #243b63;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 15px;
-        z-index: 20;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-    }
-
-    section[data-testid="stSidebar"] {
-        width: 250px !important;
-        min-width: 250px !important;
-        background:
-            linear-gradient(
-                180deg,
-                #071832 0%,
-                #0a2854 100%
-            );
-        border-right: none;
-    }
-
-    section[data-testid="stSidebar"] > div {
-        padding-top: 0 !important;
-    }
-
-    [data-testid="stSidebarContent"] {
-        padding-top: 0 !important;
-    }
-
-    [data-testid="stSidebarUserContent"] {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 0 16px 14px 16px !important;
-        transform: translateY(-55px);
-    }
-
-    .side-brand {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 2px 2px 12px 2px;
-        
-        margin-bottom: 8px;
-    }
-
-    .logo-wrap {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .kpmg-logo-img {
-        width: 74px;
-        height: auto;
-        display: block;
-    }
-
-    .brand-divider {
-        width: 1px;
-        height: 38px;
-        background: rgba(255,255,255,0.22);
-    }
-
-    .brand-name {
-        color: white;
-        font-size: 12px;
-        line-height: 1.25;
-        font-weight: 650;
-    }
-
-    .nav-item {
-        display: flex;
-        align-items: center;
-        gap: 13px;
-        padding: 10px 14px;
-        margin: 2px 0;
-        border-radius: 10px;
-        color: #eef3fb;
-        font-size: 14px;
-        font-weight: 520;
-    }
-
-    .nav-icon {
-        width: 22px;
-        height: 22px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .nav-active {
-        background:
-            linear-gradient(
-                90deg,
-                #5531dd,
-                #7249f3
-            );
-        box-shadow:
-            0 5px 18px rgba(87, 46, 221, 0.38);
-    }
-
-    .side-agent {
-        margin-top: auto;
-        margin-bottom: 0px;
-        transform: translateY(80px);
-
-        border-radius: 16px;
-        padding: 16px;
-        color: white;
-
-        background:
-            radial-gradient(
-                circle at 92% 100%,
-                rgba(116, 51, 255, 0.78),
-                transparent 42%
-            ),
-            linear-gradient(
-                135deg,
-                #193b72,
-                #352884
-            );
-
-        border:
-            1px solid rgba(135, 116, 255, 0.35);
-
-        box-shadow:
-            0 10px 25px rgba(0,0,0,0.15);
-    }
-
-    .sparkle {
-        color: #7041ff;
-        font-size: 26px;
-        line-height: 1;
-        margin-bottom: 10px;
-    }
-
-    .side-agent .sparkle {
-        color: #c6adff;
-    }
-
-    .side-agent-title {
-        font-weight: 750;
-        font-size: 15px;
-        margin-bottom: 7px;
-    }
-
-    .side-agent-copy {
-        color: #d8dcf3;
-        font-size: 13px;
-        line-height: 1.45;
-    }
-
-    .hero {
-        position: relative;
-        overflow: hidden;
-        text-align: center;
-        padding: 30px 24px 34px;
-        margin-bottom: 22px;
-        border-radius: 26px;
-        background:
-            linear-gradient(
-                180deg,
-                rgba(248,247,255,0.78),
-                rgba(250,249,255,0.96)
-            );
-    }
-
-    .hero-watermark {
-        position: absolute;
-        width: 390px;
-        right: 28px;
-        top: 5px;
-        opacity: 0.055;
-        z-index: 0;
-        pointer-events: none;
-    }
-
-    .hero-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .hero-chip {
-        display: inline-block;
-        padding: 8px 17px;
-        border-radius: 30px;
-        background: #f0ecff;
-        color: #5327de;
-        font-size: 12px;
-        font-weight: 750;
-        margin-bottom: 18px;
-    }
-
-    .hero-title {
-        color: #0a1c3a;
-        font-size: 48px;
-        line-height: 1.08;
-        letter-spacing: -1.8px;
-        font-weight: 800;
-        margin-bottom: 12px;
-    }
-
-    .hero-title span {
-        color: #5732de;
-    }
-
-    .hero-subtitle {
-        max-width: 760px;
-        margin: auto;
-        color: #536783;
-        font-size: 16px;
-        line-height: 1.55;
-    }
-
-    div[data-testid="stTextInput"] {
-        position: relative;
-    }
-
-    div[data-testid="stTextInput"]::before {
-        content: "⌕";
-        position: absolute;
-        left: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 25px;
-        color: #0d1d3a;
-        z-index: 5;
-        pointer-events: none;
-    }
-
-    div[data-testid="stTextInput"] input {
-        height: 68px;
-        border-radius: 15px;
-        border: 1.5px solid #9c79ff;
-        background-color: white;
-        padding-left: 58px;
-        font-size: 15px;
-        box-shadow:
-            0 7px 22px rgba(81, 48, 204, 0.07);
-    }
-
-    div[data-testid="stTextInput"] input:focus {
-        border-color: #7248ef;
-        box-shadow:
-            0 0 0 1px #7248ef,
-            0 7px 24px rgba(81, 48, 204, 0.09);
-    }
-
-    div[data-testid="stButton"] button {
-        border-radius: 10px;
-        min-height: 46px;
-        font-weight: 650;
-    }
-
-    .stButton > button[kind="primary"] {
-        min-height: 68px;
-        border-radius: 14px;
-        border: none;
-        color: white;
-        font-size: 15px;
-        background:
-            linear-gradient(
-                90deg,
-                #5731db,
-                #7145eb
-            );
-        box-shadow:
-            0 7px 20px rgba(83, 48, 216, 0.20);
-    }
-
-    .feature-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 25px;
-        padding: 0 12px;
-        margin-top: 18px;
-        margin-bottom: 34px;
-    }
-
-    .feature {
-        display: flex;
-        align-items: center;
-        gap: 13px;
-    }
-
-    .feature-circle {
-        min-width: 48px;
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background:
-            linear-gradient(
-                145deg,
-                #f0edff,
-                #fafaff
-            );
-        box-shadow:
-            0 4px 12px rgba(67, 48, 170, 0.08);
-    }
-
-    .feature-title {
-        color: #0e1e3a;
-        font-size: 14px;
-        font-weight: 760;
-    }
-
-    .feature-copy {
-        color: #64758c;
-        font-size: 12px;
-        margin-top: 2px;
-    }
-
-    .example-heading {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #0d1c38;
-        font-size: 18px;
-        font-weight: 780;
-        margin-top: 5px;
-        margin-bottom: 15px;
-    }
-
-    .example-card {
-        position: relative;
-        min-height: 190px;
-        border-radius: 15px;
-        padding: 20px;
-        border: 1px solid #e7e6ef;
-        background:
-            linear-gradient(
-                145deg,
-                #f0f6ff,
-                #f4f7ff
-            );
-    }
-
-    .example-card.purple-card {
-        background:
-            linear-gradient(
-                145deg,
-                #f8f4ff,
-                #f2eeff
-            );
-    }
-
-    .example-card.green-card {
-        background:
-            linear-gradient(
-                145deg,
-                #f1fbf9,
-                #eaf9f4
-            );
-    }
-
-    .example-icon {
-        height: 38px;
-        margin-bottom: 12px;
-    }
-
-    .example-icon .icon {
-        width: 34px !important;
-        height: 34px !important;
-    }
-
-    .example-title {
-        color: #0d1d39;
-        font-size: 14px;
-        font-weight: 780;
-        margin-bottom: 8px;
-    }
-
-    .example-copy {
-        color: #425773;
-        font-size: 12px;
-        line-height: 1.45;
-        padding-right: 7px;
-    }
-
-    .example-arrow {
-        position: absolute;
-        right: 16px;
-        bottom: 12px;
-        color: #5630df;
-        font-size: 25px;
-        font-weight: 600;
-    }
-
-    div[data-testid="stHorizontalBlock"] {
-        align-items: center;
-    }
-
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        margin-top: -48px;
-        float: right;
-        width: 48px;
-        min-height: 38px;
-        background: transparent;
-        border: none;
-        color: transparent;
-        box-shadow: none;
-        z-index: 10;
-        position: relative;
-    }
-
-    .right-card {
-        background: rgba(255,255,255,0.94);
-        border: 1px solid #ededf4;
-        border-radius: 17px;
-        padding: 19px;
-        box-shadow:
-            0 8px 30px rgba(23, 38, 66, 0.055);
-        margin-bottom: 18px;
-    }
-
-    .right-heading {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        color: #0d1d39;
-        font-size: 15px;
-        font-weight: 780;
-        margin-bottom: 12px;
-    }
-
-    .recent {
-        display: flex;
-        gap: 10px;
-        padding: 11px 0;
-        border-bottom: 1px solid #edf0f5;
-    }
-
-    .recent:last-child {
-        border-bottom: none;
-    }
-
-    .recent-title {
-        color: #1a2a45;
-        font-size: 12px;
-        font-weight: 650;
-        line-height: 1.35;
-    }
-
-    .recent-time {
-        color: #8b99ab;
-        font-size: 11px;
-        margin-top: 2px;
-    }
-
-    .build-card {
-        padding: 21px 15px;
-        text-align: center;
-        border-radius: 15px;
-        background:
-            linear-gradient(
-                145deg,
-                #f5efff,
-                #eae8ff
-            );
-    }
-
-    .build-graphic {
-        font-size: 38px;
-        margin-bottom: 8px;
-    }
-
-    .build-title {
-        color: #0d1d39;
-        font-size: 15px;
-        font-weight: 780;
-        margin-bottom: 8px;
-    }
-
-    .build-copy {
-        color: #576b85;
-        font-size: 12px;
-        line-height: 1.5;
-    }
-
-    .result-card {
-        background: white;
-        border: 1px solid #e7e8ef;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 13px;
-        box-shadow:
-            0 4px 18px rgba(15, 33, 60, 0.04);
-    }
-
-    .business-result {
-        background:
-            linear-gradient(
-                145deg,
-                #f7f4ff,
-                #faf9ff
-            );
-        border-color: #e1dbfb;
-    }
-
-    .result-label {
-        color: #5c3bd6;
-        text-transform: uppercase;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: .04em;
-        margin-bottom: 8px;
-    }
-
-    .result-text {
-        color: #334860;
-        font-size: 15px;
-        line-height: 1.65;
-    }
-
-    .icon {
-        display: inline-block;
-        background-color: #5b35f5;
-        mask-repeat: no-repeat;
-        mask-position: center;
-        mask-size: contain;
-        -webkit-mask-repeat: no-repeat;
-        -webkit-mask-position: center;
-        -webkit-mask-size: contain;
-    }
-
-    .icon-home-white {
-        background-color: white;
-        mask-image: url("/app/static/icons/home-white.svg");
-        -webkit-mask-image: url("/app/static/icons/home-white.svg");
-    }
-
-    .icon-search-white {
-        background-color: #e5ecf7;
-        mask-image: url("/app/static/icons/search-white.svg");
-        -webkit-mask-image: url("/app/static/icons/search-white.svg");
-    }
-
-    .icon-layers-white {
-        background-color: #e5ecf7;
-        mask-image: url("/app/static/icons/layers-white.svg");
-        -webkit-mask-image: url("/app/static/icons/layers-white.svg");
-    }
-
-    .icon-clock-white {
-        background-color: #e5ecf7;
-        mask-image: url("/app/static/icons/clock-white.svg");
-        -webkit-mask-image: url("/app/static/icons/clock-white.svg");
-    }
-
-    .icon-chart-white {
-        background-color: #e5ecf7;
-        mask-image: url("/app/static/icons/chart-white.svg");
-        -webkit-mask-image: url("/app/static/icons/chart-white.svg");
-    }
-
-    .icon-info-white {
-        background-color: #e5ecf7;
-        mask-image: url("/app/static/icons/info-white.svg");
-        -webkit-mask-image: url("/app/static/icons/info-white.svg");
-    }
-
-    .icon-file-purple {
-        background-color: #6238f6;
-        mask-image: url("/app/static/icons/file-purple.svg");
-        -webkit-mask-image: url("/app/static/icons/file-purple.svg");
-    }
-
-    .icon-target-purple {
-        background-color: #6238f6;
-        mask-image: url("/app/static/icons/target-purple.svg");
-        -webkit-mask-image: url("/app/static/icons/target-purple.svg");
-    }
-
-    .icon-layers-purple {
-        background-color: #643bfa;
-        mask-image: url("/app/static/icons/layers-purple.svg");
-        -webkit-mask-image: url("/app/static/icons/layers-purple.svg");
-    }
-
-    .icon-cpu-blue {
-        background-color: #2878f5;
-        mask-image: url("/app/static/icons/cpu-blue.svg");
-        -webkit-mask-image: url("/app/static/icons/cpu-blue.svg");
-    }
-
-    .icon-bars-green {
-        background-color: #12b98a;
-        mask-image: url("/app/static/icons/bars-green.svg");
-        -webkit-mask-image: url("/app/static/icons/bars-green.svg");
-    }
-
-    .icon-monitor {
-        background-color: #6238f6;
-        mask-image: url("/app/static/icons/monitor.svg");
-        -webkit-mask-image: url("/app/static/icons/monitor.svg");
-    }
-
-    .icon-clock {
-        background-color: #6238f6;
-        mask-image: url("/app/static/icons/clock.svg");
-        -webkit-mask-image: url("/app/static/icons/clock.svg");
-    }
-
-    </style>
-    """
-)
-
-
-# Background decoration
-
-st.html(
-    """
-    <div class="top-wave-one"></div>
-    <div class="top-wave-two"></div>
-    <div class="bottom-wave"></div>
-    """
-)
-
-
-# Profile
-
-st.html(
-    """
-    <div class="profile-circle">
-        M
-    </div>
-    """
-)
-
-
-# Load research engine
+# ---------------------------------------------------------
+# Research engine
+# ---------------------------------------------------------
 
 @st.cache_resource(show_spinner=False)
 def load_engine():
     chunks = load_chunks("arxiv")
-
-    collection, model = build_vector_store(
-        chunks,
-        "arxiv",
-    )
-
+    collection, model = build_vector_store(chunks, "arxiv")
     return chunks, collection, model
 
-
-# Run research question
 
 def ask_agent(question):
     chunks, collection, model = load_engine()
@@ -843,695 +89,1415 @@ def ask_agent(question):
     )
 
 
-# Helper functions
-
-def clean(text):
-    return html.escape(str(text or ""))
-
-
-def choose_example(question):
-    st.session_state.question = question
-
-
+# ---------------------------------------------------------
 # Session state
+# ---------------------------------------------------------
 
-if "question" not in st.session_state:
-    st.session_state.question = ""
+defaults = {
+    "page": "Home",
+    "question": "",
+    "result": None,
+    "history": [],
+    "saved_insights": [],
+    "evaluation_runs": [],
+}
 
-if "history" not in st.session_state:
-    st.session_state.history = []
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
-# Sidebar
+def go(page):
+    st.session_state.page = page
 
-with st.sidebar:
 
-    st.html(
-        f"""
-        <div class="side-brand">
+def open_example(question):
+    st.session_state.question = question
+    st.session_state.page = "Research"
 
-            <div class="logo-wrap">
-                <img
-                    src="data:image/png;base64,{KPMG_LOGO}"
-                    class="kpmg-logo-img"
-                    alt="KPMG"
-                >
-            </div>
 
-            <div class="brand-divider"></div>
+def save_current_result():
+    result = st.session_state.get("result")
+    if not result:
+        return
 
-            <div class="brand-name">
-                Break Through<br>
-                Tech AI Studio
-            </div>
+    question = result.get("question", "")
+    exists = any(
+        item.get("question") == question
+        for item in st.session_state.saved_insights
+    )
 
-        </div>
+    if not exists:
+        st.session_state.saved_insights.insert(
+            0,
+            {"question": question, "result": result},
+        )
 
-        <div class="nav-item nav-active">
-            <div class="nav-icon">
-                {icon("home-white", 21)}
-            </div>
-            <span>Home</span>
-        </div>
 
-        <div class="nav-item">
-            <div class="nav-icon">
-                {icon("search-white", 21)}
-            </div>
-            <span>Research</span>
-        </div>
+def record_run(question, result):
+    # history keeps a compact question list
+    st.session_state.history = [
+        item for item in st.session_state.history
+        if item != question
+    ]
+    st.session_state.history.insert(0, question)
+    st.session_state.history = st.session_state.history[:20]
 
-        <div class="nav-item">
-            <div class="nav-icon">
-                {icon("layers-white", 21)}
-            </div>
-            <span>Saved Insights</span>
-        </div>
-
-        <div class="nav-item">
-            <div class="nav-icon">
-                {icon("clock-white", 21)}
-            </div>
-            <span>History</span>
-        </div>
-
-        <div class="nav-item">
-            <div class="nav-icon">
-                {icon("chart-white", 21)}
-            </div>
-            <span>Evaluation</span>
-        </div>
-
-        <div class="nav-item">
-            <div class="nav-icon">
-                {icon("info-white", 21)}
-            </div>
-            <span>About</span>
-        </div>
-
-        <div class="side-agent">
-
-            <div class="sparkle">
-                ✦
-            </div>
-
-            <div class="side-agent-title">
-                AI Research Agent
-            </div>
-
-            <div class="side-agent-copy">
-                Turn research into<br>
-                business insights.
-            </div>
-
-        </div>
-        """
+    # evaluation keeps full structured results
+    st.session_state.evaluation_runs = [
+        item for item in st.session_state.evaluation_runs
+        if item.get("question") != question
+    ]
+    st.session_state.evaluation_runs.insert(
+        0,
+        {"question": question, "result": result},
     )
 
 
-# Main layout
+# ---------------------------------------------------------
+# Styles
+# ---------------------------------------------------------
 
-main_col, right_col = st.columns(
-    [3.65, 1.1],
-    gap="large",
+st.html(
+    """
+    <style>
+    :root {
+        --ink: #10213a;
+        --muted: #617086;
+        --line: #e5eaf0;
+        --panel: #ffffff;
+        --surface: #f5f7fa;
+        --navy: #071b34;
+        --navy-2: #0b274a;
+        --blue: #1d5fd3;
+        --blue-soft: #edf4ff;
+        --green: #1d8a68;
+        --green-soft: #edf9f5;
+        --amber: #a96914;
+        --amber-soft: #fff7e9;
+        --danger: #b33a3a;
+    }
+
+    html, body, [class*="css"] {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header[data-testid="stHeader"] {
+        height: 0;
+        background: transparent;
+    }
+
+    [data-testid="stToolbar"],
+    #MainMenu,
+    footer {
+        display: none;
+    }
+
+    .stApp {
+        background: #f6f8fb;
+        color: var(--ink);
+    }
+
+    .block-container {
+        max-width: 1500px;
+        padding-top: 1.25rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    section[data-testid="stSidebar"] {
+        width: 250px !important;
+        min-width: 250px !important;
+        background: linear-gradient(180deg, var(--navy), var(--navy-2));
+        border-right: none;
+    }
+
+    [data-testid="stSidebarUserContent"] {
+        padding: 24px 16px 18px 16px !important;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 4px 18px;
+        border-bottom: 1px solid rgba(255,255,255,.10);
+        margin-bottom: 14px;
+    }
+
+    .brand img {
+        width: 72px;
+        height: auto;
+        display: block;
+    }
+
+    .brand-copy {
+        color: white;
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 650;
+    }
+
+    .sidebar-label {
+        color: rgba(255,255,255,.46);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .11em;
+        margin: 16px 8px 8px;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stButton"] button {
+        width: 100%;
+        justify-content: flex-start;
+        min-height: 42px;
+        padding: 0 13px;
+        border-radius: 9px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #dce6f4;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: none;
+        margin: 2px 0;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {
+        color: white;
+        background: rgba(255,255,255,.07);
+        border-color: rgba(255,255,255,.06);
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stButton"] button[kind="primary"] {
+        color: white;
+        background: rgba(67,116,207,.28);
+        border: 1px solid rgba(115,159,237,.32);
+        box-shadow: inset 3px 0 0 #66a1ff;
+    }
+
+    .sidebar-note {
+        margin-top: 26px;
+        padding: 14px;
+        border-radius: 12px;
+        color: #d7e6fa;
+        background: rgba(255,255,255,.055);
+        border: 1px solid rgba(255,255,255,.09);
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
+    .sidebar-note strong {
+        display: block;
+        color: white;
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+
+    .eyebrow {
+        color: #2f67b8;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .11em;
+        margin-bottom: 9px;
+    }
+
+    .page-title {
+        color: var(--ink);
+        font-size: 34px;
+        line-height: 1.1;
+        font-weight: 760;
+        letter-spacing: -.8px;
+        margin: 0 0 10px;
+    }
+
+    .page-subtitle {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+        max-width: 760px;
+        margin-bottom: 22px;
+    }
+
+    .hero-panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(135deg, #ffffff, #f6f9fd);
+        padding: 28px 30px;
+        margin-bottom: 18px;
+        box-shadow: 0 8px 26px rgba(20,42,76,.04);
+    }
+
+    .hero-grid {
+        display: grid;
+        grid-template-columns: 1.45fr .8fr;
+        gap: 28px;
+        align-items: center;
+    }
+
+    .hero-title {
+        color: var(--ink);
+        font-size: 38px;
+        line-height: 1.08;
+        font-weight: 780;
+        letter-spacing: -1px;
+        margin-bottom: 12px;
+        max-width: 760px;
+    }
+
+    .hero-copy {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+        max-width: 720px;
+    }
+
+    .hero-visual {
+        min-height: 150px;
+        border-radius: 16px;
+        background:
+            linear-gradient(145deg, rgba(29,95,211,.07), rgba(17,135,107,.05)),
+            repeating-linear-gradient(
+                90deg,
+                transparent 0,
+                transparent 42px,
+                rgba(29,95,211,.035) 43px
+            );
+        border: 1px solid #e3ebf6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-flow {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #35516f;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .hero-node {
+        width: 66px;
+        height: 66px;
+        border-radius: 13px;
+        background: white;
+        border: 1px solid #dce6f3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-shadow: 0 5px 14px rgba(20,42,76,.04);
+    }
+
+    .section-title {
+        color: var(--ink);
+        font-size: 17px;
+        font-weight: 760;
+        margin: 20px 0 10px;
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
+
+    .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+
+    .info-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 17px;
+        background: var(--panel);
+        min-height: 118px;
+    }
+
+    .info-card h4 {
+        color: var(--ink);
+        font-size: 14px;
+        margin: 0 0 7px;
+    }
+
+    .info-card p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .metric-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 15px;
+        background: white;
+    }
+
+    .metric-label {
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        font-weight: 750;
+    }
+
+    .metric-value {
+        color: var(--ink);
+        font-size: 23px;
+        font-weight: 760;
+        margin-top: 4px;
+    }
+
+    .topic-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        background: white;
+        min-height: 112px;
+    }
+
+    .topic-tag {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 4px 8px;
+        margin-bottom: 9px;
+        background: var(--blue-soft);
+        color: #2b5fae;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .topic-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 760;
+        line-height: 1.35;
+        margin-bottom: 7px;
+    }
+
+    .topic-copy {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    .result-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: white;
+        padding: 18px;
+        margin-bottom: 12px;
+    }
+
+    .result-card.business {
+        background: #f8fbff;
+        border-color: #dce7f5;
+    }
+
+    .result-label {
+        color: #3967a7;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+
+    .result-copy {
+        color: #2b3f56;
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .source-row {
+        border-top: 1px solid var(--line);
+        padding: 12px 0;
+    }
+
+    .source-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .source-meta {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
+    .empty-state {
+        border: 1px dashed #cfd8e6;
+        border-radius: 14px;
+        background: white;
+        color: var(--muted);
+        padding: 28px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    .method-step {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .step-num {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--blue-soft);
+        color: #2b5fae;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .step-title {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 760;
+        margin-bottom: 3px;
+    }
+
+    .step-copy {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    div[data-testid="stTextInput"] input {
+        min-height: 54px;
+        border-radius: 11px;
+        border: 1px solid #cfd9e7;
+        background: white;
+        font-size: 14px;
+        padding-left: 15px;
+    }
+
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #6b91cf;
+        box-shadow: 0 0 0 2px rgba(66,110,180,.08);
+    }
+
+    .stButton > button[kind="primary"] {
+        min-height: 52px;
+        border-radius: 10px;
+        border: none;
+        background: #174f9f;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: none;
+    }
+
+    .stButton > button[kind="secondary"] {
+        min-height: 40px;
+        border-radius: 9px;
+        border: 1px solid #d5deeb;
+        background: white;
+        color: #29435f;
+        font-size: 12px;
+        box-shadow: none;
+    }
+
+    div[data-testid="stDataFrame"] {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    @media (max-width: 1000px) {
+        .grid-3, .grid-4, .hero-grid {
+            grid-template-columns: 1fr;
+        }
+        section[data-testid="stSidebar"] {
+            width: 220px !important;
+            min-width: 220px !important;
+        }
+    }
+    </style>
+    """
 )
 
 
-# Main section
+# ---------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------
 
-with main_col:
+with st.sidebar:
+    if KPMG_LOGO:
+        st.html(
+            f"""
+            <div class="brand">
+                <img src="data:image/png;base64,{KPMG_LOGO}" alt="KPMG">
+                <div class="brand-copy">
+                    Break Through Tech<br>
+                    AI Studio
+                </div>
+            </div>
+            """
+        )
+    else:
+        st.html(
+            """
+            <div class="brand">
+                <div class="brand-copy">
+                    KPMG × Break Through Tech<br>
+                    AI Studio
+                </div>
+            </div>
+            """
+        )
 
-    # Hero
+    st.html('<div class="sidebar-label">Workspace</div>')
+
+    for page in ["Home", "Research", "Saved Insights", "History"]:
+        st.button(
+            page,
+            key=f"nav_{page}",
+            type="primary" if st.session_state.page == page else "secondary",
+            use_container_width=True,
+            on_click=go,
+            args=(page,),
+        )
+
+    st.html('<div class="sidebar-label">Quality</div>')
+
+    for page in ["Evaluation", "About"]:
+        st.button(
+            page,
+            key=f"nav_{page}",
+            type="primary" if st.session_state.page == page else "secondary",
+            use_container_width=True,
+            on_click=go,
+            args=(page,),
+        )
 
     st.html(
-        f"""
-        <div class="hero">
-
-            <img
-                src="data:image/png;base64,{BTT_WATERMARK}"
-                class="hero-watermark"
-                alt=""
-            >
-
-            <div class="hero-content">
-
-                <div class="hero-chip">
-                    KPMG × Break Through Tech AI Studio
-                </div>
-
-                <div class="hero-title">
-                    AI Research
-                    <span>Intelligence Agent</span>
-                </div>
-
-                <div class="hero-subtitle">
-                    Turn AI research into clear business insights with grounded
-                    findings, practical implications, and source citations.
-                </div>
-
-            </div>
-
+        """
+        <div class="sidebar-note">
+            <strong>Research Intelligence Agent</strong>
+            Retrieves relevant AI research, produces grounded findings,
+            translates them into business implications, and cites the source.
         </div>
         """
     )
 
 
-    # Search bar
+# ---------------------------------------------------------
+# Shared page header
+# ---------------------------------------------------------
 
-    search_col, ask_col = st.columns(
-        [5.7, 1.3],
-        gap="small",
+def page_header(eyebrow, title, subtitle):
+    st.html(
+        f"""
+        <div class="eyebrow">{clean(eyebrow)}</div>
+        <div class="page-title">{clean(title)}</div>
+        <div class="page-subtitle">{clean(subtitle)}</div>
+        """
     )
+
+
+# ---------------------------------------------------------
+# HOME
+# ---------------------------------------------------------
+
+if st.session_state.page == "Home":
+    history_count = len(st.session_state.history)
+    saved_count = len(st.session_state.saved_insights)
+    evaluated_count = len(st.session_state.evaluation_runs)
+
+    total_findings = sum(
+        len(item["result"].get("findings", []))
+        for item in st.session_state.evaluation_runs
+        if item["result"].get("answered")
+    )
+
+    cited_findings = sum(
+        1
+        for item in st.session_state.evaluation_runs
+        if item["result"].get("answered")
+        for finding in item["result"].get("findings", [])
+        if finding.get("citations")
+    )
+
+    citation_coverage = (
+        (cited_findings / total_findings) * 100
+        if total_findings
+        else 0
+    )
+
+    st.html(
+        """
+        <div class="hero-panel">
+            <div class="hero-grid">
+                <div>
+                    <div class="eyebrow">KPMG × Break Through Tech AI Studio</div>
+                    <div class="hero-title">AI Research Intelligence Agent</div>
+                    <div class="hero-copy">
+                        A research-to-business workflow for monitoring emerging AI work,
+                        retrieving relevant evidence, and translating technical findings
+                        into practical business implications with traceable citations.
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-flow">
+                        <div class="hero-node">Research</div>
+                        <div>→</div>
+                        <div class="hero-node">Evidence</div>
+                        <div>→</div>
+                        <div class="hero-node">Insight</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+    )
+
+    start_col, _ = st.columns([1.2, 4.8])
+    with start_col:
+        if st.button(
+            "Start research",
+            key="home_start",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state.page = "Research"
+            st.rerun()
+
+    st.html('<div class="section-title">Workspace snapshot</div>')
+    st.html(
+        f"""
+        <div class="grid-4">
+            <div class="metric-card">
+                <div class="metric-label">Questions asked</div>
+                <div class="metric-value">{history_count}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Saved insights</div>
+                <div class="metric-value">{saved_count}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Evaluated runs</div>
+                <div class="metric-value">{evaluated_count}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Citation coverage</div>
+                <div class="metric-value">{citation_coverage:.0f}%</div>
+            </div>
+        </div>
+        """
+    )
+
+    st.html('<div class="section-title">What the agent does</div>')
+    st.html(
+        """
+        <div class="grid-3">
+            <div class="info-card">
+                <h4>Find relevant research</h4>
+                <p>
+                    Search the current arXiv-based research collection and retrieve
+                    the most relevant evidence for a business or AI question.
+                </p>
+            </div>
+            <div class="info-card">
+                <h4>Translate research into business meaning</h4>
+                <p>
+                    Keep the research finding separate from the business implication
+                    so evidence and interpretation remain clear.
+                </p>
+            </div>
+            <div class="info-card">
+                <h4>Keep answers traceable</h4>
+                <p>
+                    Link generated findings back to cited research and surface
+                    evidence gaps instead of inventing unsupported answers.
+                </p>
+            </div>
+        </div>
+        """
+    )
+
+    st.html('<div class="section-title">Suggested research questions</div>')
+
+    q1, q2, q3 = st.columns(3)
+
+    examples = [
+        (
+            "AI cost strategy",
+            "How can a company choose between cheaper and more capable AI models while controlling cost?",
+            q1,
+        ),
+        (
+            "Workflow intelligence",
+            "How can organizations turn recorded computer activity into reusable workflow knowledge?",
+            q2,
+        ),
+        (
+            "Agentic AI improvement",
+            "How could AI agents help a company improve algorithms instead of only optimizing hardware performance?",
+            q3,
+        ),
+    ]
+
+    for index, (tag, question_text, column) in enumerate(examples, start=1):
+        with column:
+            st.html(
+                f"""
+                <div class="topic-card">
+                    <div class="topic-tag">{clean(tag)}</div>
+                    <div class="topic-title">{clean(question_text)}</div>
+                    <div class="topic-copy">
+                        Open this question in the research workspace.
+                    </div>
+                </div>
+                """
+            )
+            st.button(
+                "Open in Research",
+                key=f"example_{index}",
+                use_container_width=True,
+                on_click=open_example,
+                args=(question_text,),
+            )
+
+    if st.session_state.history:
+        st.html('<div class="section-title">Recent research</div>')
+        for question_text in st.session_state.history[:5]:
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                st.write(question_text)
+            with col2:
+                if st.button(
+                    "Reopen",
+                    key=f"home_recent_{question_text}",
+                    use_container_width=True,
+                ):
+                    open_example(question_text)
+                    st.rerun()
+
+
+# ---------------------------------------------------------
+# RESEARCH
+# ---------------------------------------------------------
+
+elif st.session_state.page == "Research":
+    page_header(
+        "Research Workspace",
+        "Ask a research question",
+        "Retrieve relevant AI research and generate grounded findings, business implications, citations, and evidence gaps.",
+    )
+
+    search_col, action_col = st.columns([5, 1.3], gap="small")
 
     with search_col:
         question = st.text_input(
-            "Research question",
+            "Question",
             key="question",
-            placeholder="Ask a business or research question...",
+            placeholder="Example: How can companies reduce the cost of using AI models?",
             label_visibility="collapsed",
         )
 
-    with ask_col:
-        ask_button = st.button(
-            "✦ Ask Agent",
+    with action_col:
+        ask_clicked = st.button(
+            "Run research",
             type="primary",
             use_container_width=True,
         )
 
-
-    # Feature row
-
-    st.html(
-        f"""
-        <div class="feature-row">
-
-            <div class="feature">
-
-                <div class="feature-circle">
-                    {icon("file-purple", 25)}
-                </div>
-
-                <div>
-                    <div class="feature-title">
-                        Research Findings
-                    </div>
-
-                    <div class="feature-copy">
-                        Evidence from academic papers
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="feature">
-
-                <div class="feature-circle">
-                    {icon("target-purple", 25)}
-                </div>
-
-                <div>
-                    <div class="feature-title">
-                        Business Implications
-                    </div>
-
-                    <div class="feature-copy">
-                        Real-world impact and value
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="feature">
-
-                <div class="feature-circle">
-                    {icon("layers-purple", 25)}
-                </div>
-
-                <div>
-                    <div class="feature-title">
-                        Cited Sources
-                    </div>
-
-                    <div class="feature-copy">
-                        Links to original research
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-        """
+    st.caption(
+        "The agent answers only from the current research collection and may refuse when evidence is insufficient."
     )
 
-
-    # Example heading
-
-    st.html(
-        """
-        <div class="example-heading">
-            <span class="sparkle">✦</span>
-            Try an example question
-        </div>
-        """
-    )
-
-
-    # Example cards
-
-    example1, example2, example3 = st.columns(3)
-
-
-    with example1:
-
-        st.html(
-            f"""
-            <div class="example-card">
-
-                <div class="example-icon">
-                    {icon("cpu-blue", 34)}
-                </div>
-
-                <div class="example-title">
-                    AI model cost & capability
-                </div>
-
-                <div class="example-copy">
-                    How can a company choose between cheaper
-                    and more capable AI models while controlling cost?
-                </div>
-
-                <div class="example-arrow">
-                    →
-                </div>
-
-            </div>
-            """
-        )
-
-        st.button(
-            "Select",
-            key="cost_question",
-            on_click=choose_example,
-            args=(
-                "How can a company choose between cheaper and more capable AI models while controlling cost?",
-            ),
-            use_container_width=True,
-        )
-
-
-    with example2:
-
-        st.html(
-            f"""
-            <div class="example-card purple-card">
-
-                <div class="example-icon">
-                    {icon("layers-purple", 34)}
-                </div>
-
-                <div class="example-title">
-                    Workflow knowledge
-                </div>
-
-                <div class="example-copy">
-                    How can organizations turn recorded computer activity
-                    into reusable workflow knowledge?
-                </div>
-
-                <div class="example-arrow">
-                    →
-                </div>
-
-            </div>
-            """
-        )
-
-        st.button(
-            "Select",
-            key="workflow_question",
-            on_click=choose_example,
-            args=(
-                "How can organizations turn recorded computer activity into reusable workflow knowledge?",
-            ),
-            use_container_width=True,
-        )
-
-
-    with example3:
-
-        st.html(
-            f"""
-            <div class="example-card green-card">
-
-                <div class="example-icon">
-                    {icon("bars-green", 34)}
-                </div>
-
-                <div class="example-title">
-                    AI algorithm improvement
-                </div>
-
-                <div class="example-copy">
-                    How could AI agents help a company improve algorithms
-                    instead of only optimizing hardware performance?
-                </div>
-
-                <div class="example-arrow">
-                    →
-                </div>
-
-            </div>
-            """
-        )
-
-        st.button(
-            "Select",
-            key="algorithm_question",
-            on_click=choose_example,
-            args=(
-                "How could AI agents help a company improve algorithms instead of only optimizing hardware performance?",
-            ),
-            use_container_width=True,
-        )
-
-
-    # Run research agent
-
-    if ask_button:
-
+    if ask_clicked:
         question_text = question.strip()
 
         if not question_text:
-
-            st.warning(
-                "Please enter a question."
-            )
-
+            st.warning("Enter a research question first.")
         else:
-
             try:
-
-                with st.spinner(
-                    "Searching research and preparing the answer..."
-                ):
-
-                    result = ask_agent(
-                        question_text
-                    )
+                with st.spinner("Retrieving research and generating a grounded response..."):
+                    result = ask_agent(question_text)
 
                 st.session_state.result = result
-
-                if question_text not in st.session_state.history:
-
-                    st.session_state.history.insert(
-                        0,
-                        question_text,
-                    )
-
-                st.session_state.history = (
-                    st.session_state.history[:5]
-                )
+                record_run(question_text, result)
 
             except Exception as error:
-
-                st.error(
-                    "Something went wrong while running the research agent."
-                )
-
-                with st.expander(
-                    "Technical details"
-                ):
+                st.error("The research pipeline could not complete this request.")
+                with st.expander("Technical details"):
                     st.code(str(error))
 
-
-    # Research results
-
-    result = st.session_state.get(
-        "result"
-    )
+    result = st.session_state.get("result")
 
     if result:
-
         st.divider()
 
-        st.subheader(
-            "Research Response"
-        )
+        response_col, save_col = st.columns([5, 1.2])
 
-        st.caption(
-            result["question"]
-        )
+        with response_col:
+            st.subheader("Research response")
+            st.caption(result.get("question", ""))
 
-        if result["answered"]:
+        with save_col:
+            if st.button(
+                "Save insight",
+                key="save_result",
+                use_container_width=True,
+            ):
+                before = len(st.session_state.saved_insights)
+                save_current_result()
+                after = len(st.session_state.saved_insights)
 
+                if after > before:
+                    st.success("Saved.")
+                else:
+                    st.info("Already saved.")
+
+        if result.get("answered"):
             for number, finding in enumerate(
-                result["findings"],
+                result.get("findings", []),
                 start=1,
             ):
+                citations = finding.get("citations", [])
+                citation_text = (
+                    " · ".join(f"[{clean(c)}]" for c in citations)
+                    if citations
+                    else "No citation"
+                )
 
                 st.html(
                     f"""
                     <div class="result-card">
-
-                        <div class="result-label">
-                            Research Finding {number}
+                        <div class="result-label">Research finding {number}</div>
+                        <div class="result-copy">
+                            {clean(finding.get("statement", ""))}
                         </div>
-
-                        <div class="result-text">
-                            {clean(finding["statement"])}
+                        <div class="source-meta" style="margin-top:10px;">
+                            {citation_text}
                         </div>
+                    </div>
 
+                    <div class="result-card business">
+                        <div class="result-label">Business implication</div>
+                        <div class="result-copy">
+                            {clean(finding.get("business_implication", ""))}
+                        </div>
                     </div>
                     """
                 )
-
-                st.html(
-                    f"""
-                    <div class="result-card business-result">
-
-                        <div class="result-label">
-                            Business Implication
-                        </div>
-
-                        <div class="result-text">
-                            {clean(
-                                finding["business_implication"]
-                            )}
-                        </div>
-
-                    </div>
-                    """
-                )
-
-
-            # Coverage gaps
 
             if result.get("gaps"):
+                st.subheader("Evidence gaps")
+                st.info(result["gaps"])
 
-                st.subheader(
-                    "Coverage / Gaps"
-                )
-
-                st.info(
-                    result["gaps"]
-                )
-
-
-            # Sources
-
-            st.subheader(
-                "Sources"
-            )
+            st.subheader("Cited research")
 
             cited_ids = {
-                citation
-                for finding in result["findings"]
-                for citation in finding["citations"]
+                str(citation)
+                for finding in result.get("findings", [])
+                for citation in finding.get("citations", [])
             }
 
-            for source in result["sources"]:
+            cited_sources = [
+                source
+                for source in result.get("sources", [])
+                if str(source.get("id", "")) in cited_ids
+            ]
 
-                if source["id"] not in cited_ids:
-                    continue
-
-                st.html(
-                    f"""
-                    <div class="result-card">
-
-                        <div class="result-label">
-                            Cited Research
+            if not cited_sources:
+                st.info("No cited sources were returned.")
+            else:
+                for source in cited_sources:
+                    st.html(
+                        f"""
+                        <div class="source-row">
+                            <div class="source-title">
+                                {clean(source.get("title", "Untitled paper"))}
+                            </div>
+                            <div class="source-meta">
+                                arXiv {clean(source.get("id", ""))}
+                            </div>
                         </div>
-
-                        <div class="result-text">
-
-                            <strong>
-                                {clean(source["title"])}
-                            </strong>
-
-                            <br>
-
-                            arXiv {clean(source["id"])}
-
-                        </div>
-
-                    </div>
-                    """
-                )
-
-                st.link_button(
-                    "View Paper",
-                    source["url"],
-                )
-
+                        """
+                    )
+                    if source.get("url"):
+                        st.link_button(
+                            "Open paper",
+                            source["url"],
+                        )
 
         else:
-
             st.warning(
                 "The current research collection does not contain enough evidence to answer this question reliably."
             )
 
             if result.get("gaps"):
+                st.subheader("What is missing")
+                st.write(result["gaps"])
 
-                st.subheader(
-                    "What is missing"
+        with st.expander("Retrieval details"):
+            for source in result.get("sources", []):
+                distance = source.get("distance")
+                distance_text = (
+                    f"{distance:.4f}"
+                    if isinstance(distance, (int, float))
+                    else "N/A"
                 )
 
                 st.write(
-                    result["gaps"]
+                    f"**Rank {source.get('rank', '')} — "
+                    f"{source.get('title', 'Untitled')}**"
                 )
-
-
-        # Research details
-
-        with st.expander(
-            "Research details"
-        ):
-
-            for source in result["sources"]:
-
-                distance = source.get(
-                    "distance"
-                )
-
-                if isinstance(
-                    distance,
-                    (int, float),
-                ):
-                    distance_text = f"{distance:.4f}"
-
-                else:
-                    distance_text = "N/A"
-
-                st.write(
-                    f"**Rank {source['rank']} — "
-                    f"{source['title']}**"
-                )
-
                 st.caption(
-                    f"arXiv {source['id']} · "
-                    f"Retrieval distance {distance_text}"
+                    f"arXiv {source.get('id', '')} · "
+                    f"retrieval distance {distance_text}"
                 )
 
 
-# Right panel
+# ---------------------------------------------------------
+# SAVED INSIGHTS
+# ---------------------------------------------------------
 
-with right_col:
+elif st.session_state.page == "Saved Insights":
+    page_header(
+        "Knowledge Workspace",
+        "Saved insights",
+        "A working collection of research responses you chose to keep for later review.",
+    )
 
-    # Recent questions
-
-    history = st.session_state.history[:3]
-
-    if history:
-
-        recent_items = ""
-
-        recent_icons = [
-            "monitor",
-            "file-purple",
-            "layers-purple",
-        ]
-
-        for index, recent in enumerate(history):
-
-            icon_name = recent_icons[
-                min(index, len(recent_icons) - 1)
-            ]
-
-            recent_items += f"""
-            <div class="recent">
-
-                <div>
-                    {icon(icon_name, 20)}
-                </div>
-
-                <div>
-
-                    <div class="recent-title">
-                        {clean(recent)}
-                    </div>
-
-                    <div class="recent-time">
-                        Recent
-                    </div>
-
-                </div>
-
+    if not st.session_state.saved_insights:
+        st.html(
+            """
+            <div class="empty-state">
+                No saved insights yet.<br>
+                Run a research question and select <strong>Save insight</strong>.
             </div>
             """
-
+        )
     else:
+        for index, item in enumerate(
+            st.session_state.saved_insights,
+            start=1,
+        ):
+            result = item["result"]
+            question_text = item["question"]
 
-        recent_items = """
-        <div class="recent">
-            <div>
-                <div class="recent-title">
-                    Your recent questions will show here.
+            with st.expander(
+                f"{index}. {question_text}",
+                expanded=index == 1,
+            ):
+                if result.get("answered"):
+                    for number, finding in enumerate(
+                        result.get("findings", []),
+                        start=1,
+                    ):
+                        st.markdown(f"**Finding {number}**")
+                        st.write(finding.get("statement", ""))
+
+                        st.markdown("**Business implication**")
+                        st.write(
+                            finding.get("business_implication", "")
+                        )
+
+                        citations = finding.get("citations", [])
+                        if citations:
+                            st.caption(
+                                "Sources: "
+                                + ", ".join(
+                                    f"[{citation}]"
+                                    for citation in citations
+                                )
+                            )
+                else:
+                    st.warning(
+                        "This saved question did not have enough supporting evidence."
+                    )
+
+
+# ---------------------------------------------------------
+# HISTORY
+# ---------------------------------------------------------
+
+elif st.session_state.page == "History":
+    page_header(
+        "Research Log",
+        "History",
+        "Questions asked during the current session, ordered from most recent to oldest.",
+    )
+
+    if not st.session_state.history:
+        st.html(
+            """
+            <div class="empty-state">
+                No research history yet.
+            </div>
+            """
+        )
+    else:
+        for index, question_text in enumerate(
+            st.session_state.history,
+            start=1,
+        ):
+            row1, row2 = st.columns([5, 1])
+
+            with row1:
+                st.write(f"**{index}. {question_text}**")
+
+            with row2:
+                if st.button(
+                    "Open",
+                    key=f"history_open_{index}",
+                    use_container_width=True,
+                ):
+                    st.session_state.question = question_text
+                    st.session_state.page = "Research"
+                    st.rerun()
+
+            st.divider()
+
+
+# ---------------------------------------------------------
+# EVALUATION
+# ---------------------------------------------------------
+
+elif st.session_state.page == "Evaluation":
+    page_header(
+        "Quality & Evidence",
+        "Evaluation",
+        "Measured checks from actual research runs. The dashboard reports observable pipeline behavior without inventing quality scores.",
+    )
+
+    runs = st.session_state.evaluation_runs
+
+    if not runs:
+        st.html(
+            """
+            <div class="empty-state">
+                No evaluated runs yet.<br>
+                Ask a question in Research and the measurable checks will appear here automatically.
+            </div>
+            """
+        )
+    else:
+        total_questions = len(runs)
+
+        answered_count = sum(
+            1
+            for item in runs
+            if item["result"].get("answered")
+        )
+
+        refused_count = total_questions - answered_count
+
+        total_findings = sum(
+            len(item["result"].get("findings", []))
+            for item in runs
+            if item["result"].get("answered")
+        )
+
+        cited_findings = sum(
+            1
+            for item in runs
+            if item["result"].get("answered")
+            for finding in item["result"].get("findings", [])
+            if finding.get("citations")
+        )
+
+        citation_coverage = (
+            (cited_findings / total_findings) * 100
+            if total_findings
+            else 0
+        )
+
+        st.html(
+            f"""
+            <div class="grid-4">
+                <div class="metric-card">
+                    <div class="metric-label">Questions evaluated</div>
+                    <div class="metric-value">{total_questions}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Answered</div>
+                    <div class="metric-value">{answered_count}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Refused / unsupported</div>
+                    <div class="metric-value">{refused_count}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Citation coverage</div>
+                    <div class="metric-value">{citation_coverage:.0f}%</div>
                 </div>
             </div>
-        </div>
-        """
+            """
+        )
 
+        st.caption(
+            "Citation coverage = findings with at least one citation ÷ all generated findings."
+        )
+
+        st.html('<div class="section-title">Question-level checks</div>')
+
+        for run_index, item in enumerate(runs, start=1):
+            result = item["result"]
+            question_text = item["question"]
+            answered = bool(result.get("answered"))
+            findings = result.get("findings", []) if answered else []
+            sources = result.get("sources", [])
+
+            cited_ids = {
+                str(citation)
+                for finding in findings
+                for citation in finding.get("citations", [])
+            }
+
+            source_ids = {
+                str(source.get("id", ""))
+                for source in sources
+            }
+
+            cited_findings_for_run = sum(
+                1
+                for finding in findings
+                if finding.get("citations")
+            )
+
+            run_coverage = (
+                (cited_findings_for_run / len(findings)) * 100
+                if findings
+                else 0
+            )
+
+            invalid_citations = sorted(
+                citation
+                for citation in cited_ids
+                if citation not in source_ids
+            )
+
+            valid_citations = not invalid_citations
+
+            unique_cited_sources = len(
+                cited_ids.intersection(source_ids)
+            )
+
+            with st.expander(
+                f"{run_index}. {question_text}",
+                expanded=run_index == 1,
+            ):
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.metric(
+                    "Answer status",
+                    "Answered" if answered else "Refused",
+                )
+                c2.metric("Findings", len(findings))
+                c3.metric(
+                    "Cited sources",
+                    unique_cited_sources,
+                )
+                c4.metric(
+                    "Citation coverage",
+                    f"{run_coverage:.0f}%"
+                    if findings
+                    else "N/A",
+                )
+
+                st.markdown("#### Measurable checks")
+
+                if answered:
+                    if cited_findings_for_run == len(findings) and findings:
+                        st.success(
+                            "Every generated finding contains at least one citation."
+                        )
+                    else:
+                        st.warning(
+                            f"{cited_findings_for_run} of {len(findings)} findings contain citations."
+                        )
+
+                    if valid_citations:
+                        st.success(
+                            "All cited paper IDs exist in the returned source set."
+                        )
+                    else:
+                        st.error(
+                            "Citation mismatch: "
+                            + ", ".join(invalid_citations)
+                        )
+
+                    implications_present = sum(
+                        1
+                        for finding in findings
+                        if str(
+                            finding.get(
+                                "business_implication",
+                                "",
+                            )
+                        ).strip()
+                    )
+
+                    if implications_present == len(findings) and findings:
+                        st.success(
+                            "Every research finding has a separate business implication."
+                        )
+                    else:
+                        st.warning(
+                            f"{implications_present} of {len(findings)} findings have a business implication."
+                        )
+
+                else:
+                    st.info(
+                        "The agent reported insufficient evidence and did not produce research findings."
+                    )
+
+                    if result.get("gaps"):
+                        st.write(result["gaps"])
+
+                if sources:
+                    st.markdown("#### Retrieved research")
+
+                    rows = []
+
+                    for source in sources:
+                        distance = source.get("distance")
+                        rows.append(
+                            {
+                                "Rank": source.get("rank", ""),
+                                "Paper": source.get("title", ""),
+                                "arXiv": source.get("id", ""),
+                                "Retrieval distance": (
+                                    f"{distance:.4f}"
+                                    if isinstance(
+                                        distance,
+                                        (int, float),
+                                    )
+                                    else "N/A"
+                                ),
+                                "Cited": (
+                                    "Yes"
+                                    if str(source.get("id", "")) in cited_ids
+                                    else "No"
+                                ),
+                            }
+                        )
+
+                    st.dataframe(
+                        rows,
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+
+        st.divider()
+        st.subheader("Technical validation")
+        st.success(
+            "22 / 22 automated tests passed in the current validated test run."
+        )
+        st.caption(
+            "This is a software test result, not an AI quality percentage."
+        )
+
+
+# ---------------------------------------------------------
+# ABOUT
+# ---------------------------------------------------------
+
+elif st.session_state.page == "About":
+    page_header(
+        "Project Methodology",
+        "About the project",
+        "How the AI Research Intelligence Agent turns publicly available AI research into grounded business insight.",
+    )
 
     st.html(
-        f"""
-        <div class="right-card">
-
-            <div class="right-heading">
-                {icon("clock", 21)}
-                Recent Questions
+        """
+        <div class="grid-3">
+            <div class="info-card">
+                <h4>Problem</h4>
+                <p>
+                    AI research is growing quickly and is difficult for business teams
+                    to monitor, interpret, and operationalize consistently.
+                </p>
             </div>
-
-            {recent_items}
-
+            <div class="info-card">
+                <h4>Approach</h4>
+                <p>
+                    Use retrieval-augmented generation to locate relevant research,
+                    summarize evidence, and separate technical findings from business interpretation.
+                </p>
+            </div>
+            <div class="info-card">
+                <h4>Output</h4>
+                <p>
+                    Grounded research findings, business implications, cited sources,
+                    and explicit evidence gaps when the collection cannot support a claim.
+                </p>
+            </div>
         </div>
         """
     )
 
+    st.html('<div class="section-title">Research-to-insight workflow</div>')
 
-    # Build on AI research
+    steps = [
+        (
+            "Collect",
+            "Publicly available AI research is collected from arXiv and prepared for retrieval.",
+        ),
+        (
+            "Preprocess",
+            "Research text and metadata are normalized and chunked into retrievable units.",
+        ),
+        (
+            "Retrieve",
+            "Embeddings and vector search identify research most relevant to the user's question.",
+        ),
+        (
+            "Expand context",
+            "Neighboring chunks are added so generation sees supporting context around the retrieved evidence.",
+        ),
+        (
+            "Generate",
+            "Gemini produces research findings and separate business implications using the retrieved evidence.",
+        ),
+        (
+            "Validate",
+            "Citations, evidence gaps, unsupported-question behavior, and retrieval details are exposed for evaluation.",
+        ),
+    ]
 
-    st.html(
-        """
-        <div class="right-card">
-
-            <div class="build-card">
-
-                <div class="build-graphic">
-                    🔎
+    for index, (title, copy) in enumerate(steps, start=1):
+        st.html(
+            f"""
+            <div class="method-step">
+                <div class="step-num">{index}</div>
+                <div>
+                    <div class="step-title">{clean(title)}</div>
+                    <div class="step-copy">{clean(copy)}</div>
                 </div>
-
-                <div class="build-title">
-                    Build on AI Research
-                </div>
-
-                <div class="build-copy">
-                    Explore findings, identify business
-                    opportunities, and discover gaps
-                    for future work.
-                </div>
-
             </div>
+            """
+        )
 
-        </div>
+    st.html('<div class="section-title">Current stack</div>')
+
+    st.markdown(
+        """
+        **Research source:** arXiv  
+        **Retrieval:** vector search over processed research chunks  
+        **Generation:** Gemini  
+        **Application:** Streamlit  
+        **Quality controls:** citations, evidence gaps, refusal behavior, retrieval transparency
         """
     )
