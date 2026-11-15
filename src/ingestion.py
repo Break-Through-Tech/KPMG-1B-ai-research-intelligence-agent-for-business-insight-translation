@@ -22,7 +22,6 @@ def load_local_papers(data_path="data"):
         if not text.strip():
             raise ValueError(f"No text could be extracted from {path.name}")
 
-        # Keep the PDF title and source ID so retrieved passages remain traceable.
         papers.append(
             {
                 "title": metadata.get("/Title") or path.stem,
@@ -38,19 +37,37 @@ def load_local_papers(data_path="data"):
     return papers
 
 
-def fetch_arxiv_papers(query="cat:cs.AI", max_results=100):
-    search = arxiv.Search(
-        query=query,
-        max_results=max_results,
-        sort_by=arxiv.SortCriterion.SubmittedDate,
-    )
+def fetch_arxiv_papers(max_results=100, max_results_per_query=25):
+    """Fetch recent arXiv papers across business-relevant AI research topics."""
+
+    queries = [
+        '"LLM routing" OR "model routing"',
+        '"inference cost" OR "inference efficiency"',
+        '"AI agents" OR "agentic AI"',
+        '"retrieval augmented generation" OR RAG',
+        '"AI evaluation" OR "LLM evaluation"',
+        '"workflow automation" OR "task automation"',
+        '"enterprise AI" OR "business AI"',
+    ]
 
     client = arxiv.Client()
-    papers = []
+    papers_by_id = {}
 
-    for paper in client.results(search):
-        papers.append(
-            {
+    for query in queries:
+        search = arxiv.Search(
+            query=query,
+            max_results=max_results_per_query,
+            sort_by=arxiv.SortCriterion.SubmittedDate,
+        )
+
+        for paper in client.results(search):
+            paper_id = paper.entry_id
+
+            # Skip duplicate papers returned by multiple searches.
+            if paper_id in papers_by_id:
+                continue
+
+            papers_by_id[paper_id] = {
                 "title": paper.title,
                 "authors": [author.name for author in paper.authors],
                 "abstract": paper.summary,
@@ -61,9 +78,12 @@ def fetch_arxiv_papers(query="cat:cs.AI", max_results=100):
                 "pdf_url": paper.pdf_url,
                 "entry_id": paper.entry_id,
             }
-        )
 
-    return papers
+            # Keep compatibility with preprocessing.py's max_results=100.
+            if len(papers_by_id) >= max_results:
+                return list(papers_by_id.values())
+
+    return list(papers_by_id.values())
 
 
 if __name__ == "__main__":
