@@ -548,7 +548,6 @@ This project was developed through the **Break Through Tech AI Studio** in colla
 We would like to thank:
 
 - **Chris Jambor** — KPMG Challenge Advisor
-- **Abhinav Raghunathan** — Business Owner
 - **Alexandra Ladyzhensky** — AI Studio Coach
 - **Break Through Tech AI Studio**
 
