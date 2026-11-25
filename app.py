@@ -48,6 +48,19 @@ def image_to_base64(path):
 
 
 KPMG_LOGO = image_to_base64(ROOT / "static" / "kpmg-logo.png")
+BTT_WATERMARK = image_to_base64(ROOT / "static" / "btt-watermark.png")
+
+SEARCH_GOLD = image_to_base64(ROOT / "static" / "icons" / "search-gold.png")
+EVIDENCE_GOLD = image_to_base64(ROOT / "static" / "icons" / "evidence-gold.png")
+INSIGHT_GOLD = image_to_base64(ROOT / "static" / "icons" / "insight-gold.png")
+
+QUESTION_GOLD = image_to_base64(ROOT / "static" / "icons" / "question-gold.png")
+BOOKMARK_GOLD = image_to_base64(ROOT / "static" / "icons" / "bookmark-gold.png")
+GEAR_GOLD = image_to_base64(ROOT / "static" / "icons" / "gear-gold.png")
+LAYERS_GOLD = image_to_base64(ROOT / "static" / "icons" / "layers-gold.png")
+
+GRID_GOLD = image_to_base64(ROOT / "static" / "icons" / "grid-gold.png")
+SHIELD_GOLD = image_to_base64(ROOT / "static" / "icons" / "shield-gold.png")
 
 
 # ---------------------------------------------------------
@@ -113,6 +126,24 @@ def go(page):
 
 def open_example(question):
     st.session_state.question = question
+    st.session_state.result = None
+    st.session_state.page = "Research"
+
+def open_history(question):
+    st.session_state.question = question
+    matching_run = next(
+        (
+            item
+            for item in st.session_state.evaluation_runs
+            if item.get("question") == question
+        ),
+        None,
+    )
+    if matching_run:
+        st.session_state.result = matching_run.get("result")
+    else:
+        st.session_state.result = None
+
     st.session_state.page = "Research"
 
 
@@ -209,38 +240,66 @@ st.html(
     section[data-testid="stSidebar"] {
         width: 250px !important;
         min-width: 250px !important;
-        background: linear-gradient(180deg, var(--navy), var(--navy-2));
-        border-right: none;
+        background: #F3F1EC
+        border-right: 1px solid #DDD8CE;
     }
 
     [data-testid="stSidebarUserContent"] {
-        padding: 24px 16px 18px 16px !important;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0 16px 14px 16px !important;
+        transform: translateY(-55px);
     }
 
     .brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+
+    padding: 12px 8px 18px;
+
+    border-bottom: 1px solid #D8D3CA;
+    margin-bottom: 14px;
+    }
+
+    .logo-box {
+        width: 90px;
+        height: 64px;
+
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 0 4px 18px;
-        border-bottom: 1px solid rgba(255,255,255,.10);
-        margin-bottom: 14px;
+        justify-content: center;
+
+        padding: 0;
+        box-sizing: border-box;
     }
 
-    .brand img {
-        width: 72px;
-        height: auto;
+    .brand-logo {
         display: block;
+        object-fit: contain;
     }
 
-    .brand-copy {
-        color: white;
+    .kpmg-brand {
+        width: 82px;
+        height: auto;
+    }
+
+    .btt-brand {
+        width: 76px;
+        height: auto;
+    }
+
+    .brand-fallback {
+        color: #202833;
         font-size: 12px;
-        line-height: 1.35;
-        font-weight: 650;
+        font-weight: 700;
+        text-align: center;
     }
 
     .sidebar-label {
-        color: rgba(255,255,255,.46);
+        color: #7D786F;
         font-size: 10px;
         font-weight: 800;
         text-transform: uppercase;
@@ -256,7 +315,7 @@ st.html(
         border-radius: 9px;
         border: 1px solid transparent;
         background: transparent;
-        color: #dce6f4;
+        color: #222831;
         font-size: 13px;
         font-weight: 600;
         box-shadow: none;
@@ -264,38 +323,49 @@ st.html(
     }
 
     section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {
-        color: white;
+        color: #222831;
         background: rgba(255,255,255,.07);
         border-color: rgba(255,255,255,.06);
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stButton"] button[kind="primary"] {
-        color: white;
-        background: rgba(67,116,207,.28);
-        border: 1px solid rgba(115,159,237,.32);
-        box-shadow: inset 3px 0 0 #66a1ff;
+    section[data-testid="stSidebar"]
+    div[data-testid="stButton"]
+    button[kind="primary"] {
+        color: #222831;
+
+        background: linear-gradient(
+            135deg,
+            #c59a48,
+            #a97b2d
+        );
+
+        border: 1px solid rgba(238, 207, 140, .55);
+
+        box-shadow:
+            inset 3px 0 0 #f2d28b,
+            0 4px 12px rgba(0, 0, 0, .10);
     }
 
     .sidebar-note {
         margin-top: 26px;
         padding: 14px;
         border-radius: 12px;
-        color: #d7e6fa;
-        background: rgba(255,255,255,.055);
-        border: 1px solid rgba(255,255,255,.09);
+        color: #4A4F55;
+        background: #ECE7DE;
+        border:  1px solid #D8D1C5;
         font-size: 11px;
         line-height: 1.5;
     }
 
     .sidebar-note strong {
         display: block;
-        color: white;
+        color: #1F2933;
         margin-bottom: 5px;
         font-size: 12px;
     }
 
     .eyebrow {
-        color: #2f67b8;
+        color: #987126;
         font-size: 11px;
         font-weight: 800;
         text-transform: uppercase;
@@ -380,18 +450,34 @@ st.html(
     }
 
     .hero-node {
-        width: 66px;
-        height: 66px;
-        border-radius: 13px;
-        background: white;
-        border: 1px solid #dce6f3;
+        width: 82px;
+        height: 82px;
+        border-radius: 14px;
+        background: #ffffff;
+        border: 1px solid #eee7da;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 7px;
         text-align: center;
-        box-shadow: 0 5px 14px rgba(20,42,76,.04);
+        color: #17253a;
+        font-size: 11px;
+        font-weight: 750;
+        box-shadow: 0 6px 18px rgba(30, 35, 45, .05);
     }
 
+    .hero-icon {
+        width: 27px;
+        height: 27px;
+        display: block;
+    }
+
+    .hero-arrow {
+        color: #b58a37;
+        font-size: 19px;
+        font-weight: 700;
+    }
     .section-title {
         color: var(--ink);
         font-size: 17px;
@@ -411,13 +497,19 @@ st.html(
         gap: 12px;
     }
 
-    .info-card {
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 17px;
-        background: var(--panel);
-        min-height: 118px;
+    .icon-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
     }
+
+    .info-icon {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
 
     .info-card h4 {
         color: var(--ink);
@@ -437,6 +529,16 @@ st.html(
         border-radius: 12px;
         padding: 14px 15px;
         background: white;
+
+    display: flex;
+        align-items: center;
+        gap: 13px;
+    }
+
+    .metric-icon {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
     }
 
     .metric-label {
@@ -467,8 +569,8 @@ st.html(
         border-radius: 999px;
         padding: 4px 8px;
         margin-bottom: 9px;
-        background: var(--blue-soft);
-        color: #2b5fae;
+        background: #fbf6ea;
+        color: #987126;
         font-size: 9px;
         font-weight: 800;
         text-transform: uppercase;
@@ -593,14 +695,13 @@ st.html(
     }
 
     .stButton > button[kind="primary"] {
-        min-height: 52px;
-        border-radius: 10px;
-        border: none;
-        background: #174f9f;
+        background: linear-gradient(
+            135deg,
+            #c59a48,
+            #ad802e
+        );
         color: white;
-        font-size: 13px;
-        font-weight: 700;
-        box-shadow: none;
+        border: none;
     }
 
     .stButton > button[kind="secondary"] {
@@ -638,25 +739,37 @@ st.html(
 # ---------------------------------------------------------
 
 with st.sidebar:
-    if KPMG_LOGO:
+    if KPMG_LOGO and BTT_WATERMARK:
         st.html(
             f"""
             <div class="brand">
-                <img src="data:image/png;base64,{KPMG_LOGO}" alt="KPMG">
-                <div class="brand-copy">
-                    Break Through Tech<br>
-                    AI Studio
+
+                <div class="logo-box">
+                    <img
+                        src="data:image/png;base64,{KPMG_LOGO}"
+                        alt="KPMG"
+                        class="brand-logo kpmg-brand"
+                    >
                 </div>
+
+                <div class="logo-box">
+                    <img
+                        src="data:image/png;base64,{BTT_WATERMARK}"
+                        alt="Break Through Tech"
+                        class="brand-logo btt-brand"
+                    >
+                </div>
+
             </div>
             """
         )
+
     else:
         st.html(
             """
             <div class="brand">
-                <div class="brand-copy">
-                    KPMG × Break Through Tech<br>
-                    AI Studio
+                <div class="brand-fallback">
+                    KPMG × Break Through Tech
                 </div>
             </div>
             """
@@ -664,10 +777,18 @@ with st.sidebar:
 
     st.html('<div class="sidebar-label">Workspace</div>')
 
+    workspace_icons = {
+    "Home": ":material/home:",
+    "Research": ":material/search:",
+    "Saved Insights": ":material/bookmark:",
+    "History": ":material/history:",
+}
+
     for page in ["Home", "Research", "Saved Insights", "History"]:
         st.button(
             page,
             key=f"nav_{page}",
+            icon=workspace_icons[page],
             type="primary" if st.session_state.page == page else "secondary",
             use_container_width=True,
             on_click=go,
@@ -676,10 +797,16 @@ with st.sidebar:
 
     st.html('<div class="sidebar-label">Quality</div>')
 
+    quality_icons = {
+        "Evaluation": ":material/bar_chart:",
+        "About": ":material/info:",
+    }
+
     for page in ["Evaluation", "About"]:
         st.button(
             page,
             key=f"nav_{page}",
+            icon=quality_icons[page],
             type="primary" if st.session_state.page == page else "secondary",
             use_container_width=True,
             on_click=go,
@@ -741,7 +868,7 @@ if st.session_state.page == "Home":
     )
 
     st.html(
-        """
+        f"""
         <div class="hero-panel">
             <div class="hero-grid">
                 <div>
@@ -755,13 +882,38 @@ if st.session_state.page == "Home":
                 </div>
                 <div class="hero-visual">
                     <div class="hero-flow">
-                        <div class="hero-node">Research</div>
-                        <div>→</div>
-                        <div class="hero-node">Evidence</div>
-                        <div>→</div>
-                        <div class="hero-node">Insight</div>
+
+                        <div class="hero-node">
+                            <img
+                                src="data:image/png;base64,{SEARCH_GOLD}"
+                                class="hero-icon"
+                            >
+                            <span>Research</span>
+                        </div>
+
+                        <div class="hero-arrow">→</div>
+
+                        <div class="hero-node">
+                            <img
+                                src="data:image/png;base64,{EVIDENCE_GOLD}"
+                                class="hero-icon"
+                            >
+                            <span>Evidence</span>
+                        </div>
+
+                        <div class="hero-arrow">→</div>
+
+                        <div class="hero-node">
+                            <img
+                                src="data:image/png;base64,{INSIGHT_GOLD}"
+                                class="hero-icon"
+                            >
+                            <span>Insight</span>
+                        </div>
+                
                     </div>
                 </div>
+
             </div>
         </div>
         """
@@ -782,51 +934,106 @@ if st.session_state.page == "Home":
     st.html(
         f"""
         <div class="grid-4">
+
             <div class="metric-card">
-                <div class="metric-label">Questions asked</div>
-                <div class="metric-value">{history_count}</div>
+                <img
+                    src="data:image/png;base64,{QUESTION_GOLD}"
+                    class="metric-icon"
+                >
+                <div>
+                    <div class="metric-label">Questions asked</div>
+                    <div class="metric-value">{history_count}</div>
+                </div>
             </div>
+
             <div class="metric-card">
-                <div class="metric-label">Saved insights</div>
-                <div class="metric-value">{saved_count}</div>
+                <img
+                    src="data:image/png;base64,{BOOKMARK_GOLD}"
+                    class="metric-icon"
+                >
+                <div>
+                    <div class="metric-label">Saved insights</div>
+                    <div class="metric-value">{saved_count}</div>
+                </div>
             </div>
+
             <div class="metric-card">
-                <div class="metric-label">Evaluated runs</div>
-                <div class="metric-value">{evaluated_count}</div>
+                <img
+                    src="data:image/png;base64,{GEAR_GOLD}"
+                    class="metric-icon"
+                >
+                <div>
+                    <div class="metric-label">Evaluated runs</div>
+                    <div class="metric-value">{evaluated_count}</div>
+                </div>
             </div>
+
             <div class="metric-card">
-                <div class="metric-label">Citation coverage</div>
-                <div class="metric-value">{citation_coverage:.0f}%</div>
+                <img
+                    src="data:image/png;base64,{LAYERS_GOLD}"
+                    class="metric-icon"
+                >
+                <div>
+                    <div class="metric-label">Citation coverage</div>
+                    <div class="metric-value">{citation_coverage:.0f}%</div>
+                </div>
             </div>
+
         </div>
         """
     )
 
     st.html('<div class="section-title">What the agent does</div>')
+
     st.html(
-        """
+        f"""
         <div class="grid-3">
-            <div class="info-card">
-                <h4>Find relevant research</h4>
-                <p>
-                    Search the current arXiv-based research collection and retrieve
-                    the most relevant evidence for a business or AI question.
-                </p>
+
+            <div class="info-card icon-card">
+                <img
+                    src="data:image/png;base64,{SEARCH_GOLD}"
+                    class="info-icon"
+                >
+
+                <div>
+                    <h4>Find relevant research</h4>
+                    <p>
+                        Search the research collection for evidence
+                        relevant to a business or AI question.
+                    </p>
+                </div>
             </div>
-            <div class="info-card">
-                <h4>Translate research into business meaning</h4>
-                <p>
-                    Keep the research finding separate from the business implication
-                    so evidence and interpretation remain clear.
-                </p>
+
+            <div class="info-card icon-card">
+                <img
+                    src="data:image/png;base64,{GRID_GOLD}"
+                    class="info-icon"
+                >
+
+                <div>
+                    <h4>Turn research into business meaning</h4>
+                    <p>
+                        Translate technical findings into clear,
+                        practical business implications.
+                    </p>
+                </div>
             </div>
-            <div class="info-card">
-                <h4>Keep answers traceable</h4>
-                <p>
-                    Link generated findings back to cited research and surface
-                    evidence gaps instead of inventing unsupported answers.
-                </p>
+
+            <div class="info-card icon-card">
+                <img
+                    src="data:image/png;base64,{SHIELD_GOLD}"
+                    class="info-icon"
+                >
+
+                <div>
+                    <h4>Keep answers traceable</h4>
+                    <p>
+                        Connect insights to cited research and surface
+                        evidence gaps when support is limited.
+                    </p>
+                </div>
             </div>
+
         </div>
         """
     )
@@ -886,7 +1093,7 @@ if st.session_state.page == "Home":
                     key=f"home_recent_{question_text}",
                     use_container_width=True,
                 ):
-                    open_example(question_text)
+                    open_history(question_text)
                     st.rerun()
 
 
@@ -900,24 +1107,24 @@ elif st.session_state.page == "Research":
         "Ask a research question",
         "Retrieve relevant AI research and generate grounded findings, business implications, citations, and evidence gaps.",
     )
+    with st.form("research_form", clear_on_submit=False):
 
-    search_col, action_col = st.columns([5, 1.3], gap="small")
+        search_col, action_col = st.columns([5, 1.3], gap="small")
 
-    with search_col:
-        question = st.text_input(
-            "Question",
-            key="question",
-            placeholder="Example: How can companies reduce the cost of using AI models?",
-            label_visibility="collapsed",
-        )
+        with search_col:
+            question = st.text_input(
+                "Question",
+                key="question",
+                placeholder="Example: How can companies reduce the cost of using AI models?",
+                label_visibility="collapsed",
+            )
 
-    with action_col:
-        ask_clicked = st.button(
-            "Run research",
-            type="primary",
-            use_container_width=True,
-        )
-
+        with action_col:
+            ask_clicked = st.form_submit_button(
+                "Run research",
+                type="primary",
+                use_container_width=True,
+            )
     st.caption(
         "The agent answers only from the current research collection and may refuse when evidence is insufficient."
     )
@@ -1162,8 +1369,7 @@ elif st.session_state.page == "History":
                     key=f"history_open_{index}",
                     use_container_width=True,
                 ):
-                    st.session_state.question = question_text
-                    st.session_state.page = "Research"
+                    open_history(question_text)
                     st.rerun()
 
             st.divider()
